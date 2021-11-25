@@ -28,6 +28,7 @@ contract Lottery is Ownable {
     address private _rewardWallet;
     address[] private _players;
     Prize[] private _prizes;
+    mapping(address => bool) private _isPlayer;
     mapping(address => bool) private _isWinner;
     mapping(uint256 => Prize[]) private _prizeHistory;
     mapping(address => uint256) private _farmingAmountOf;
@@ -79,6 +80,8 @@ contract Lottery is Ownable {
     }
 
     function _createLotteryList() private {
+        for (uint256 i = 0; i < _players.length; i++)
+            delete _isPlayer[_players[i]];
         delete _players;
         delete _totalLockedLPs;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
@@ -94,18 +97,19 @@ contract Lottery is Ownable {
                 uint256 numParticipants = lockFarming.getNumParticipants();
                 for (uint256 k = 0; k < numParticipants; k++) {
                     address participant = lockFarming.participants(k);
-                    uint256 farmingAmount = lockFarming.getValidLockAmount(
-                        participant
-                    );
-                    if (farmingAmount > 0) {
-                        _totalLockedLPs = _totalLockedLPs.add(
-                            farmingAmount.mul(_weightOf[lpToken])
-                        );
+                    uint256 weightedFarmingAmount = lockFarming
+                        .getValidLockAmount(participant)
+                        .mul(_weightOf[lpToken]);
+                    if (!_isPlayer[participant]) {
                         _players.push(participant);
-                        _farmingAmountOf[participant] = farmingAmount.mul(
-                            _weightOf[lpToken]
-                        );
+                        _isPlayer[participant] = true;
                     }
+                    _totalLockedLPs = _totalLockedLPs.add(
+                        weightedFarmingAmount
+                    );
+                    _farmingAmountOf[participant] = _farmingAmountOf[
+                        participant
+                    ].add(weightedFarmingAmount);
                 }
             }
         }
