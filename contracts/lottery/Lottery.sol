@@ -5,10 +5,11 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "../farming/FarmingFactory.sol";
 import "../farming/LockFarming.sol";
 
-contract Lottery is Ownable {
+contract Lottery is Ownable, VRFConsumerBase {
     using SafeMath for uint256;
 
     struct Prize {
@@ -23,13 +24,13 @@ contract Lottery is Ownable {
     uint256 public nextLotteryTime;
     uint256 private _totalLockedLPs;
     uint256 private _remainingPrizes;
-    address private _oraiToken;
-    address private _oraiVRFOracle;
     address private _rewardWallet;
     address[] private _players;
     Prize[] private _prizes;
+    uint256 private _rewardAmount;
+    bytes32 private _linkKeyHash;
+    uint256 private _linkFee;
     mapping(address => bool) private _isPlayer;
-    mapping(address => bool) private _isWinner;
     mapping(uint256 => Prize[]) private _prizeHistory;
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
@@ -41,15 +42,21 @@ contract Lottery is Ownable {
         address rewardWallet,
         address farmingFactory_,
         uint256 numWinners_
-    ) Ownable() {
+    )
+        Ownable()
+        VRFConsumerBase(
+            0xa555fC018435bef5A13C6c6870a9d4C11DEC329C,
+            0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06
+        )
+    {
         currentRound = 1;
         dfyContract = IERC20(dfyToken);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
         nextLotteryTime = block.timestamp;
-        _oraiToken = address(0xE6487f7BdEB798e2457E44570f367a3059Ed9F93);
-        _oraiVRFOracle = address(0x4144Dfd7Df97839507c404d1CA79b47aA227dDA2);
+        _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
+        _linkFee = 10**17;
     }
 
     function getPrizeHistory(uint256 round)
@@ -123,57 +130,42 @@ contract Lottery is Ownable {
         require(
             dfyContract.allowance(_rewardWallet, address(this)) >= rewardAmount
         );
+        _rewardAmount = rewardAmount;
+        _random();
+    }
+
+    function _random() private returns (bytes32 requestId) {
+        require(LINK.balanceOf(address(this)) >= _linkFee);
+        return requestRandomness(_linkKeyHash, _linkFee);
+    }
+
+    function fulfillRandomness(bytes32 requestId, uint256 randomness)
+        internal
+        override
+    {
         address chosenPlayer = _players[0];
-        do {
-            uint256 randomNumber = random().mod(_totalLockedLPs);
-            for (uint256 i = 0; i < _players.length; i++) {
-                if (randomNumber < _farmingAmountOf[_players[i]]) {
-                    chosenPlayer = _players[i];
-                    break;
-                } else randomNumber -= _farmingAmountOf[_players[i]];
-            }
-        } while (_isWinner[chosenPlayer]);
-        _isWinner[chosenPlayer] = true;
-        _prizes.push(Prize(chosenPlayer, rewardAmount));
-        dfyContract.transferFrom(_rewardWallet, chosenPlayer, rewardAmount);
+        uint256 randomNumber = randomness.mod(_totalLockedLPs);
+        for (uint256 i = 0; i < _players.length; i++) {
+            if (randomNumber < _farmingAmountOf[_players[i]]) {
+                chosenPlayer = _players[i];
+                delete _isPlayer[_players[i]];
+                _totalLockedLPs = _totalLockedLPs.sub(
+                    _farmingAmountOf[_players[i]]
+                );
+                _players[i] = _players[_players.length - 1];
+                _players.pop();
+                break;
+            } else randomNumber -= _farmingAmountOf[_players[i]];
+        }
+        _prizes.push(Prize(chosenPlayer, _rewardAmount));
+        dfyContract.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;
             currentRound++;
             _remainingPrizes = numWinners;
-            for (uint256 i = _prizes.length - 1; i >= 0; i--) {
-                delete _isWinner[_prizes[i].winner];
-                _prizes.pop();
-            }
+            delete _prizes;
         }
-        emit Reward(currentRound, chosenPlayer, rewardAmount);
+        emit Reward(currentRound, chosenPlayer, _rewardAmount);
     }
-
-    function random() private returns (uint256) {
-        IERC20(_oraiToken).approve(
-            _oraiVRFOracle,
-            IVRFOracleOraichain(_oraiVRFOracle).fee()
-        );
-        bytes memory data = abi.encode(
-            address(this),
-            this.fulfillRandomness.selector
-        );
-        bytes32 reqId = IVRFOracleOraichain(_oraiVRFOracle).randomnessRequest(
-            uint256(keccak256(abi.encodePacked(gasleft(), block.timestamp))),
-            data
-        );
-        return fulfillRandomness(reqId);
-    }
-
-    function fulfillRandomness(bytes32 _reqId) public pure returns (uint256) {
-        return uint256(_reqId);
-    }
-}
-
-interface IVRFOracleOraichain {
-    function randomnessRequest(uint256 _seed, bytes calldata _data)
-        external
-        returns (bytes32);
-
-    function fee() external returns (uint256);
 }
