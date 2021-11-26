@@ -18,7 +18,7 @@ contract SavingFarming is Ownable {
 
     address[] public participants;
     IERC20 public lpContract;
-    IERC20 public dfyContract;
+    IERC20 public DFY;
     FarmingFactory public farmingFactory;
     address private _rewardWallet;
     uint256 private _totalDFYPerMonth;
@@ -41,7 +41,7 @@ contract SavingFarming is Ownable {
         address owner_
     ) Ownable() {
         lpContract = IERC20(lpToken);
-        dfyContract = IERC20(dfyToken);
+        DFY = IERC20(dfyToken);
         _rewardWallet = rewardWallet;
         _totalDFYPerMonth = totalDFYPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
@@ -149,11 +149,9 @@ contract SavingFarming is Ownable {
 
     function _settle(address participant) private {
         uint256 interest = getCurrentInterest(participant);
-        require(dfyContract.balanceOf(_rewardWallet) >= interest);
-        require(
-            dfyContract.allowance(_rewardWallet, address(this)) >= interest
-        );
-        dfyContract.transferFrom(_rewardWallet, participant, interest);
+        require(DFY.balanceOf(_rewardWallet) >= interest);
+        require(DFY.allowance(_rewardWallet, address(this)) >= interest);
+        DFY.transferFrom(_rewardWallet, participant, interest);
         emit Settle(address(lpContract), participant, interest);
     }
 

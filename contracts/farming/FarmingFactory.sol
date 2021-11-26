@@ -8,7 +8,7 @@ import "./LockFarming.sol";
 
 contract FarmingFactory is Ownable {
     address[] public lpTokens;
-    address public dfyToken;
+    address public DFY;
     address private _rewardWallet;
     mapping(address => bool) private _isLpTokenSupported;
     mapping(address => address) private _savingFarmingOf;
@@ -22,8 +22,8 @@ contract FarmingFactory is Ownable {
         address lockFarmingContract
     );
 
-    constructor(address dfyToken_, address rewardWallet) Ownable() {
-        dfyToken = dfyToken_;
+    constructor(address dfyToken, address rewardWallet) Ownable() {
+        DFY = dfyToken;
         _rewardWallet = rewardWallet;
     }
 
@@ -63,7 +63,7 @@ contract FarmingFactory is Ownable {
         require(_savingFarmingOf[lpToken] == address(0));
         SavingFarming newSavingContract = new SavingFarming(
             lpToken,
-            dfyToken,
+            DFY,
             _rewardWallet,
             totalDFYPerMonth,
             owner()
@@ -84,7 +84,7 @@ contract FarmingFactory is Ownable {
         LockFarming newLockContract = new LockFarming(
             duration,
             lpToken,
-            dfyToken,
+            DFY,
             _rewardWallet,
             totalDFYPerMonth,
             owner()

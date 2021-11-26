@@ -19,7 +19,7 @@ contract LockFarming is Ownable {
     address[] public participants;
     uint256 public duration;
     IERC20 public lpContract;
-    IERC20 public dfyContract;
+    IERC20 public DFY;
     FarmingFactory public farmingFactory;
     address private _rewardWallet;
     uint256 private _totalDFYPerMonth;
@@ -49,7 +49,7 @@ contract LockFarming is Ownable {
     ) Ownable() {
         duration = duration_;
         lpContract = IERC20(lpToken);
-        dfyContract = IERC20(dfyToken);
+        DFY = IERC20(dfyToken);
         _rewardWallet = rewardWallet;
         _totalDFYPerMonth = totalDFYPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
@@ -137,7 +137,7 @@ contract LockFarming is Ownable {
         LockItem storage item = _lockItemsOf[msg.sender][index];
         require(block.timestamp < item.expiredAt);
         uint256 interest = getCurrentInterest(msg.sender, index);
-        dfyContract.transferFrom(_rewardWallet, msg.sender, interest);
+        DFY.transferFrom(_rewardWallet, msg.sender, interest);
         item.lastClaim = block.timestamp;
         emit ClaimInterest(address(lpContract), msg.sender, interest);
     }
@@ -152,7 +152,7 @@ contract LockFarming is Ownable {
                 item.lastClaim = block.timestamp;
             }
         }
-        dfyContract.transferFrom(_rewardWallet, msg.sender, totalInterest);
+        DFY.transferFrom(_rewardWallet, msg.sender, totalInterest);
         emit ClaimInterest(address(lpContract), msg.sender, totalInterest);
     }
 
@@ -164,7 +164,7 @@ contract LockFarming is Ownable {
         uint256 withdrawnAmount = item.amount;
         lpContract.transfer(msg.sender, withdrawnAmount);
         uint256 interest = getCurrentInterest(msg.sender, index);
-        dfyContract.transferFrom(_rewardWallet, msg.sender, interest);
+        DFY.transferFrom(_rewardWallet, msg.sender, interest);
         item.amount = _lockItemsOf[msg.sender][numLockItems - 1].amount;
         item.expiredAt = _lockItemsOf[msg.sender][numLockItems - 1].expiredAt;
         item.lastClaim = _lockItemsOf[msg.sender][numLockItems - 1].lastClaim;

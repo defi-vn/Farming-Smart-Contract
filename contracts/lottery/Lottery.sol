@@ -22,7 +22,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         SPIN_OVER
     }
     uint256 public currentRound;
-    IERC20 public dfyContract;
+    IERC20 public DFY;
     FarmingFactory public farmingFactory;
     uint256 public numWinners;
     uint256 public nextLotteryTime;
@@ -55,7 +55,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         )
     {
         currentRound = 1;
-        dfyContract = IERC20(dfyToken);
+        DFY = IERC20(dfyToken);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
@@ -140,10 +140,8 @@ contract Lottery is Ownable, VRFConsumerBase {
         require(block.timestamp > nextLotteryTime);
         if (_remainingPrizes == numWinners) _createLotteryList();
         require(_players.length > numWinners && numWinners > 0);
-        require(dfyContract.balanceOf(_rewardWallet) >= rewardAmount);
-        require(
-            dfyContract.allowance(_rewardWallet, address(this)) >= rewardAmount
-        );
+        require(DFY.balanceOf(_rewardWallet) >= rewardAmount);
+        require(DFY.allowance(_rewardWallet, address(this)) >= rewardAmount);
         require(LINK.balanceOf(address(this)) >= _linkFee);
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
@@ -171,7 +169,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         }
         emit Reward(currentRound, chosenPlayer, _rewardAmount);
         _prizes.push(Prize(chosenPlayer, _rewardAmount));
-        dfyContract.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
+        DFY.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;
