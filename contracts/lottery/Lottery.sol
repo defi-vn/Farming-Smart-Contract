@@ -17,6 +17,10 @@ contract Lottery is Ownable, VRFConsumerBase {
         uint256 reward;
     }
 
+    enum SpinStatus {
+        SPINNING,
+        SPIN_OVER
+    }
     uint256 public currentRound;
     IERC20 public dfyContract;
     FarmingFactory public farmingFactory;
@@ -30,6 +34,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     uint256 private _rewardAmount;
     bytes32 private _linkKeyHash;
     uint256 private _linkFee;
+    SpinStatus private _status;
     mapping(address => bool) private _isPlayer;
     mapping(uint256 => Prize[]) private _prizeHistory;
     mapping(address => uint256) private _farmingAmountOf;
@@ -54,9 +59,11 @@ contract Lottery is Ownable, VRFConsumerBase {
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
+        _remainingPrizes = numWinners_;
         nextLotteryTime = block.timestamp;
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
+        _status = SpinStatus.SPIN_OVER;
     }
 
     function getPrizeHistory(uint256 round)
@@ -84,6 +91,12 @@ contract Lottery is Ownable, VRFConsumerBase {
 
     function setNextLotteryTime(uint256 nextTime) external onlyOwner {
         nextLotteryTime = nextTime;
+    }
+
+    function setNumWinners(uint256 numWinners_) external onlyOwner {
+        require(_remainingPrizes == numWinners);
+        numWinners = numWinners_;
+        _remainingPrizes = numWinners_;
     }
 
     function _createLotteryList() private {
@@ -123,26 +136,25 @@ contract Lottery is Ownable, VRFConsumerBase {
     }
 
     function spinReward(uint256 rewardAmount) external onlyOwner {
+        require(_status == SpinStatus.SPIN_OVER);
         require(block.timestamp > nextLotteryTime);
-        _createLotteryList();
+        if (_remainingPrizes == numWinners) _createLotteryList();
         require(_players.length > numWinners && numWinners > 0);
         require(dfyContract.balanceOf(_rewardWallet) >= rewardAmount);
         require(
             dfyContract.allowance(_rewardWallet, address(this)) >= rewardAmount
         );
-        _rewardAmount = rewardAmount;
-        _random();
-    }
-
-    function _random() private returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= _linkFee);
-        return requestRandomness(_linkKeyHash, _linkFee);
+        _rewardAmount = rewardAmount;
+        _status = SpinStatus.SPINNING;
+        requestRandomness(_linkKeyHash, _linkFee);
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness)
         internal
         override
     {
+        _status = SpinStatus.SPIN_OVER;
         address chosenPlayer = _players[0];
         uint256 randomNumber = randomness.mod(_totalLockedLPs);
         for (uint256 i = 0; i < _players.length; i++) {
@@ -157,6 +169,7 @@ contract Lottery is Ownable, VRFConsumerBase {
                 break;
             } else randomNumber -= _farmingAmountOf[_players[i]];
         }
+        emit Reward(currentRound, chosenPlayer, _rewardAmount);
         _prizes.push(Prize(chosenPlayer, _rewardAmount));
         dfyContract.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
@@ -166,6 +179,9 @@ contract Lottery is Ownable, VRFConsumerBase {
             _remainingPrizes = numWinners;
             delete _prizes;
         }
-        emit Reward(currentRound, chosenPlayer, _rewardAmount);
+    }
+
+    function emergencyWithdraw() external onlyOwner {
+        LINK.transfer(owner(), LINK.balanceOf(address(this)));
     }
 }
