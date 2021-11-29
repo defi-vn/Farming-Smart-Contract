@@ -29,7 +29,8 @@ contract SavingFarming is Ownable {
     event TransferToLockFarming(
         address lpToken,
         address participant,
-        uint256 amount
+        uint256 amount,
+        uint8 option
     );
     event Settle(address lpToken, address participant, uint256 interest);
 
@@ -144,7 +145,12 @@ contract SavingFarming is Ownable {
         _farmingInfoOf[msg.sender].amount = _farmingInfoOf[msg.sender]
             .amount
             .sub(amount);
-        emit TransferToLockFarming(address(lpContract), msg.sender, amount);
+        emit TransferToLockFarming(
+            address(lpContract),
+            msg.sender,
+            amount,
+            option
+        );
     }
 
     function _settle(address participant) private {
