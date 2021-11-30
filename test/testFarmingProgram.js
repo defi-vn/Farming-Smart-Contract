@@ -5,7 +5,7 @@ const { expect } = require("chai");
 const FARMING_FACTORY = "FarmingFactory";
 const SAVING_FARMING = "SavingFarming";
 const LOCK_FARMING = "LockFarming";
-const DFY_TOKEN = "DFYToken";
+const REWARD_TOKEN = "DFYToken";
 const LP_TOKEN = "LpToken";
 
 before("Deploy FarmingFactory, DFY contract, LP contract", async () => {
@@ -15,11 +15,11 @@ before("Deploy FarmingFactory, DFY contract, LP contract", async () => {
   this.participant = participant;
   this.rewardWallet = rewardWallet;
   this.feeWallet = "0x0000000000000000000000000000000000000001";
-  this.totalDFYPerMonth = "20000000000000000000000000";
+  this.totalRewardPerMonth = "20000000000000000000000000";
   this.depositAmount = 5000;
 
-  // Deploy DFYContract
-  this.dfyFactory = await hre.ethers.getContractFactory(DFY_TOKEN);
+  // Deploy RewardContract
+  this.dfyFactory = await hre.ethers.getContractFactory(REWARD_TOKEN);
   this.dfyContract = await this.dfyFactory.deploy(this.feeWallet, this.rewardWallet.address);
   await this.dfyContract.deployed();
 
@@ -30,10 +30,7 @@ before("Deploy FarmingFactory, DFY contract, LP contract", async () => {
 
   // Deploy FarmingFactory
   this.farmingFactory = await hre.ethers.getContractFactory(FARMING_FACTORY);
-  this.farmingFactoryContract = await this.farmingFactory.deploy(
-    this.dfyContract.address,
-    this.rewardWallet.address
-  );
+  this.farmingFactoryContract = await this.farmingFactory.deploy();
   await this.farmingFactoryContract.deployed();
 
   // Get SavingFarming and LockFarming factories
@@ -46,23 +43,34 @@ describe("Test farming program", () => {
     let savingCreationTx = await this.farmingFactory
       .connect(this.deployer)
       .attach(this.farmingFactoryContract.address)
-      .createSavingFarming(this.lpContract.address, this.totalDFYPerMonth);
+      .createSavingFarming(
+        this.lpContract.address,
+        this.dfyContract.address,
+        this.rewardWallet.address,
+        this.totalRewardPerMonth
+      );
     let events = (await savingCreationTx.wait()).events;
     let savingFarmingAddr = events[2]?.args?.savingFarmingContract;
     this.savingFarmingContract = this.savingFarmingFactory.attach(savingFarmingAddr);
     let lockCreationTx = await this.farmingFactory
       .connect(this.deployer)
       .attach(this.farmingFactoryContract.address)
-      .createLockFarming(this.lpContract.address, 10, this.totalDFYPerMonth);
+      .createLockFarming(
+        10,
+        this.lpContract.address,
+        this.dfyContract.address,
+        this.rewardWallet.address,
+        this.totalRewardPerMonth
+      );
     events = (await lockCreationTx.wait()).events;
     let lockFarmingAddr = events[2]?.args?.lockFarmingContract;
     this.lockFarmingContract = this.lockFarmingFactory.attach(lockFarmingAddr);
     let numSupportedLpTokens = await this.farmingFactoryContract.getNumSupportedLpTokens();
-    let dfyAddress = await this.farmingFactoryContract.lpTokens(0);
+    let lpAddress = await this.farmingFactoryContract.lpTokens(0);
     let farmingAddr1 = await this.savingFarmingContract.farmingFactory();
     let farmingAddr2 = await this.lockFarmingContract.farmingFactory();
     expect(numSupportedLpTokens.toString()).to.equal("1");
-    expect(dfyAddress).to.equal(this.lpContract.address);
+    expect(lpAddress).to.equal(this.lpContract.address);
     expect(farmingAddr1).to.equal(this.farmingFactoryContract.address);
     expect(farmingAddr2).to.equal(this.farmingFactoryContract.address);
   });
@@ -86,18 +94,34 @@ describe("Test farming program", () => {
     expect(lpValue.toString()).to.equal("500000000000000000000000000");
   });
 
-  it("Set amount of DFY for monthly reward in SavingFarming", async () => {
+  it("Set monthly total reward amount by 2 ways", async () => {
     await this.savingFarmingFactory
       .connect(this.deployer)
       .attach(this.savingFarmingContract.address)
-      .setTotalDFYPerMonth(this.totalDFYPerMonth);
-  });
-
-  it("Set amount of DFY for monthly reward in LockFarming", async () => {
+      .setTotalRewardPerMonth(this.totalRewardPerMonth);
     await this.lockFarmingFactory
       .connect(this.deployer)
       .attach(this.lockFarmingContract.address)
-      .setTotalDFYPerMonth(this.totalDFYPerMonth);
+      .setTotalRewardPerMonth(this.totalRewardPerMonth);
+    await this.farmingFactory
+      .connect(this.deployer)
+      .attach(this.farmingFactoryContract.address)
+      .setTotalRewardPerMonth(this.totalRewardPerMonth);
+  });
+
+  it("Set reward wallet address by 2 ways", async () => {
+    await this.savingFarmingFactory
+      .connect(this.deployer)
+      .attach(this.savingFarmingContract.address)
+      .setRewardWallet(this.rewardWallet.address);
+    await this.lockFarmingFactory
+      .connect(this.deployer)
+      .attach(this.lockFarmingContract.address)
+      .setRewardWallet(this.rewardWallet.address);
+    await this.farmingFactory
+      .connect(this.deployer)
+      .attach(this.farmingFactoryContract.address)
+      .setRewardWallet(this.rewardWallet.address);
   });
 
   it("Deposit some LPs to SavingFarming", async () => {
@@ -258,7 +282,7 @@ describe("Test farming program", () => {
     await this.savingFarmingFactory
       .connect(this.participant)
       .attach(this.savingFarmingContract.address)
-      .transferToLockFarming(this.depositAmount, 1);
+      .transferToLockFarming(this.depositAmount, 0);
     let lockItems = await this.lockFarmingContract.getLockItems(this.participant.address);
     let numParticipants = await this.savingFarmingContract.getNumParticipants();
     let farmingAmount = await this.savingFarmingContract.getFarmingAmount(this.participant.address);
