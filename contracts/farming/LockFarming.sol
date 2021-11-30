@@ -5,9 +5,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./FarmingFactory.sol";
 
-contract LockFarming is Ownable {
+contract LockFarming is Ownable, Pausable {
     using SafeMath for uint256;
 
     struct LockItem {
@@ -96,6 +97,7 @@ contract LockFarming is Ownable {
         uint256 farmingPeriod = block.timestamp - item.lastClaim;
         if (farmingPeriod > duration) farmingPeriod = duration;
         uint256 totalLpToken = lpContract.balanceOf(address(this));
+        if (paused()) return 0;
         if (totalLpToken == 0) return 0;
         return
             item
@@ -119,6 +121,7 @@ contract LockFarming is Ownable {
 
     function receiveLpFromSavingFarming(address participant, uint256 amount)
         external
+        whenNotPaused
     {
         address savingFarming = farmingFactory.getSavingFarmingContract(
             address(lpContract)
@@ -132,7 +135,7 @@ contract LockFarming is Ownable {
         emit ReceiveFromSavingFarming(address(lpContract), participant, amount);
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) external whenNotPaused {
         require(lpContract.balanceOf(msg.sender) >= amount);
         require(lpContract.allowance(msg.sender, address(this)) >= amount);
         lpContract.transferFrom(msg.sender, address(this), amount);
@@ -143,7 +146,7 @@ contract LockFarming is Ownable {
         emit Deposit(address(lpContract), msg.sender, amount);
     }
 
-    function claimInterest(uint256 index) external {
+    function claimInterest(uint256 index) external whenNotPaused {
         uint256 numLockItems = _lockItemsOf[msg.sender].length;
         require(index < numLockItems);
         LockItem storage item = _lockItemsOf[msg.sender][index];
@@ -154,7 +157,7 @@ contract LockFarming is Ownable {
         emit ClaimInterest(address(lpContract), msg.sender, interest);
     }
 
-    function claimAllInterest() external {
+    function claimAllInterest() external whenNotPaused {
         uint256 totalInterest = 0;
         for (uint256 i = 0; i < _lockItemsOf[msg.sender].length; i++) {
             LockItem storage item = _lockItemsOf[msg.sender][i];
@@ -199,5 +202,9 @@ contract LockFarming is Ownable {
 
     function emergencyWithdraw(address recipient) external onlyOperator {
         lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
+    }
+
+    function pause() external onlyOperator {
+        _pause();
     }
 }

@@ -5,10 +5,11 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./LockFarming.sol";
 import "./FarmingFactory.sol";
 
-contract SavingFarming is Ownable {
+contract SavingFarming is Ownable, Pausable {
     using SafeMath for uint256;
 
     struct FarmingInfo {
@@ -74,6 +75,7 @@ contract SavingFarming is Ownable {
         FarmingInfo memory info = _farmingInfoOf[participant];
         uint256 farmingPeriod = block.timestamp - info.startedAt;
         uint256 totalLpToken = lpContract.balanceOf(address(this));
+        if (paused()) return 0;
         if (totalLpToken == 0) return 0;
         return
             info
@@ -95,7 +97,7 @@ contract SavingFarming is Ownable {
         _rewardWallet = rewardWallet;
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount) external whenNotPaused {
         require(lpContract.balanceOf(msg.sender) >= amount);
         require(lpContract.allowance(msg.sender, address(this)) >= amount);
         _settle(msg.sender);
@@ -109,7 +111,7 @@ contract SavingFarming is Ownable {
         emit Deposit(address(lpContract), msg.sender, amount);
     }
 
-    function claimInterest() external {
+    function claimInterest() external whenNotPaused {
         _settle(msg.sender);
         _farmingInfoOf[msg.sender].startedAt = block.timestamp;
     }
@@ -132,7 +134,10 @@ contract SavingFarming is Ownable {
         emit Withdraw(address(lpContract), msg.sender, amount);
     }
 
-    function transferToLockFarming(uint256 amount, uint8 option) external {
+    function transferToLockFarming(uint256 amount, uint8 option)
+        external
+        whenNotPaused
+    {
         require(_farmingInfoOf[msg.sender].amount >= amount);
         uint8 numLockTypes = farmingFactory.getNumLockTypes(
             address(lpContract)
@@ -177,5 +182,9 @@ contract SavingFarming is Ownable {
 
     function emergencyWithdraw(address recipient) external onlyOperator {
         lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
+    }
+
+    function pause() external onlyOperator {
+        _pause();
     }
 }
