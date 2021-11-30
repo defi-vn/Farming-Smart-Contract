@@ -74,8 +74,15 @@ contract Lottery is Ownable, VRFConsumerBase {
         return _prizeHistory[round];
     }
 
-    function getWeight(address lpToken) external view returns (uint8) {
-        return _weightOf[lpToken];
+    function getWeight(address[] memory lpTokens)
+        external
+        view
+        returns (uint8[] memory)
+    {
+        uint8[] memory weights;
+        for (uint256 i = 0; i < lpTokens.length; i++)
+            weights[i] = _weightOf[lpTokens[i]];
+        return weights;
     }
 
     function setWeight(address[] memory lpTokens, uint8[] memory weights)
