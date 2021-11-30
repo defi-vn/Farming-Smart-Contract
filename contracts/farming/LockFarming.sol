@@ -19,10 +19,10 @@ contract LockFarming is Ownable {
     address[] public participants;
     uint256 public duration;
     IERC20 public lpContract;
-    IERC20 public DFY;
+    IERC20 public rewardToken;
     FarmingFactory public farmingFactory;
     address private _rewardWallet;
-    uint256 private _totalDFYPerMonth;
+    uint256 private _totalRewardPerMonth;
     mapping(address => LockItem[]) private _lockItemsOf;
 
     event ReceiveFromSavingFarming(
@@ -42,18 +42,23 @@ contract LockFarming is Ownable {
     constructor(
         uint256 duration_,
         address lpToken,
-        address dfyToken,
+        address rewardToken_,
         address rewardWallet,
-        uint256 totalDFYPerMonth,
+        uint256 totalRewardPerMonth,
         address owner_
     ) Ownable() {
         duration = duration_;
         lpContract = IERC20(lpToken);
-        DFY = IERC20(dfyToken);
+        rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
-        _totalDFYPerMonth = totalDFYPerMonth;
+        _totalRewardPerMonth = totalRewardPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
         transferOwnership(owner_);
+    }
+
+    modifier onlyOperator() {
+        require(msg.sender == owner() || msg.sender == address(farmingFactory));
+        _;
     }
 
     function getValidLockAmount(address participant)
@@ -95,14 +100,21 @@ contract LockFarming is Ownable {
         return
             item
                 .amount
-                .mul(_totalDFYPerMonth)
+                .mul(_totalRewardPerMonth)
                 .div(259200)
                 .mul(farmingPeriod)
                 .div(totalLpToken);
     }
 
-    function setTotalDFYPerMonth(uint256 dfyAmount) external onlyOwner {
-        _totalDFYPerMonth = dfyAmount;
+    function setTotalRewardPerMonth(uint256 rewardAmount)
+        external
+        onlyOperator
+    {
+        _totalRewardPerMonth = rewardAmount;
+    }
+
+    function setRewardWallet(address rewardWallet) external onlyOperator {
+        _rewardWallet = rewardWallet;
     }
 
     function receiveLpFromSavingFarming(address participant, uint256 amount)
@@ -137,7 +149,7 @@ contract LockFarming is Ownable {
         LockItem storage item = _lockItemsOf[msg.sender][index];
         require(block.timestamp < item.expiredAt);
         uint256 interest = getCurrentInterest(msg.sender, index);
-        DFY.transferFrom(_rewardWallet, msg.sender, interest);
+        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.lastClaim = block.timestamp;
         emit ClaimInterest(address(lpContract), msg.sender, interest);
     }
@@ -152,7 +164,7 @@ contract LockFarming is Ownable {
                 item.lastClaim = block.timestamp;
             }
         }
-        DFY.transferFrom(_rewardWallet, msg.sender, totalInterest);
+        rewardToken.transferFrom(_rewardWallet, msg.sender, totalInterest);
         emit ClaimInterest(address(lpContract), msg.sender, totalInterest);
     }
 
@@ -164,7 +176,7 @@ contract LockFarming is Ownable {
         uint256 withdrawnAmount = item.amount;
         lpContract.transfer(msg.sender, withdrawnAmount);
         uint256 interest = getCurrentInterest(msg.sender, index);
-        DFY.transferFrom(_rewardWallet, msg.sender, interest);
+        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.amount = _lockItemsOf[msg.sender][numLockItems - 1].amount;
         item.expiredAt = _lockItemsOf[msg.sender][numLockItems - 1].expiredAt;
         item.lastClaim = _lockItemsOf[msg.sender][numLockItems - 1].lastClaim;
@@ -185,7 +197,7 @@ contract LockFarming is Ownable {
         );
     }
 
-    function emergencyWithdraw() external onlyOwner {
-        lpContract.transfer(owner(), lpContract.balanceOf(address(this)));
+    function emergencyWithdraw(address recipient) external onlyOperator {
+        lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
     }
 }

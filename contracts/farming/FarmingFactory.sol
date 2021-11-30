@@ -8,8 +8,6 @@ import "./LockFarming.sol";
 
 contract FarmingFactory is Ownable {
     address[] public lpTokens;
-    address public DFY;
-    address private _rewardWallet;
     mapping(address => bool) private _isLpTokenSupported;
     mapping(address => address) private _savingFarmingOf;
     mapping(address => uint8) private _numLockTypesOf;
@@ -22,10 +20,7 @@ contract FarmingFactory is Ownable {
         address lockFarmingContract
     );
 
-    constructor(address dfyToken, address rewardWallet) Ownable() {
-        DFY = dfyToken;
-        _rewardWallet = rewardWallet;
-    }
+    constructor() Ownable() {}
 
     function checkLpTokenStatus(address lpToken) external view returns (bool) {
         return _isLpTokenSupported[lpToken];
@@ -56,16 +51,42 @@ contract FarmingFactory is Ownable {
         return _lockFarmingOf[lpToken][lockType];
     }
 
-    function createSavingFarming(address lpToken, uint256 totalDFYPerMonth)
-        external
-        onlyOwner
-    {
+    function setTotalRewardPerMonth(uint256 rewardAmount) external onlyOwner {
+        for (uint256 i = 0; i < lpTokens.length; i++) {
+            address savingFarming = _savingFarmingOf[lpTokens[i]];
+            SavingFarming(savingFarming).setTotalRewardPerMonth(rewardAmount);
+            uint8 numLockTypes = _numLockTypesOf[lpTokens[i]];
+            for (uint8 j = 0; j < numLockTypes; j++) {
+                address lockFarming = _lockFarmingOf[lpTokens[i]][j];
+                LockFarming(lockFarming).setTotalRewardPerMonth(rewardAmount);
+            }
+        }
+    }
+
+    function setRewardWallet(address rewardWallet) external onlyOwner {
+        for (uint256 i = 0; i < lpTokens.length; i++) {
+            address savingFarming = _savingFarmingOf[lpTokens[i]];
+            SavingFarming(savingFarming).setRewardWallet(rewardWallet);
+            uint8 numLockTypes = _numLockTypesOf[lpTokens[i]];
+            for (uint8 j = 0; j < numLockTypes; j++) {
+                address lockFarming = _lockFarmingOf[lpTokens[i]][j];
+                LockFarming(lockFarming).setRewardWallet(rewardWallet);
+            }
+        }
+    }
+
+    function createSavingFarming(
+        address lpToken,
+        address rewardToken,
+        address rewardWallet,
+        uint256 totalRewardPerMonth
+    ) external onlyOwner {
         require(_savingFarmingOf[lpToken] == address(0));
         SavingFarming newSavingContract = new SavingFarming(
             lpToken,
-            DFY,
-            _rewardWallet,
-            totalDFYPerMonth,
+            rewardToken,
+            rewardWallet,
+            totalRewardPerMonth,
             owner()
         );
         _savingFarmingOf[lpToken] = address(newSavingContract);
@@ -77,26 +98,40 @@ contract FarmingFactory is Ownable {
     }
 
     function createLockFarming(
-        address lpToken,
         uint256 duration,
-        uint256 totalDFYPerMonth
+        address lpToken,
+        address rewardToken,
+        address rewardWallet,
+        uint256 totalRewardPerMonth
     ) external onlyOwner {
         LockFarming newLockContract = new LockFarming(
             duration,
             lpToken,
-            DFY,
-            _rewardWallet,
-            totalDFYPerMonth,
+            rewardToken,
+            rewardWallet,
+            totalRewardPerMonth,
             owner()
         );
         if (!_isLpTokenSupported[lpToken]) {
             lpTokens.push(lpToken);
             _isLpTokenSupported[lpToken] = true;
         }
-        _numLockTypesOf[lpToken]++;
         _lockFarmingOf[lpToken][_numLockTypesOf[lpToken]] = address(
             newLockContract
         );
+        _numLockTypesOf[lpToken]++;
         emit NewLockFarming(lpToken, duration, address(newLockContract));
+    }
+
+    function emergencyWithdraw(address recipient) external onlyOwner {
+        for (uint256 i = 0; i < lpTokens.length; i++) {
+            address savingFarming = _savingFarmingOf[lpTokens[i]];
+            SavingFarming(savingFarming).emergencyWithdraw(recipient);
+            uint8 numLockTypes = _numLockTypesOf[lpTokens[i]];
+            for (uint8 j = 0; j < numLockTypes; j++) {
+                address lockFarming = _lockFarmingOf[lpTokens[i]][j];
+                LockFarming(lockFarming).emergencyWithdraw(recipient);
+            }
+        }
     }
 }

@@ -18,10 +18,10 @@ contract SavingFarming is Ownable {
 
     address[] public participants;
     IERC20 public lpContract;
-    IERC20 public DFY;
+    IERC20 public rewardToken;
     FarmingFactory public farmingFactory;
     address private _rewardWallet;
-    uint256 private _totalDFYPerMonth;
+    uint256 private _totalRewardPerMonth;
     mapping(address => FarmingInfo) private _farmingInfoOf;
 
     event Deposit(address lpToken, address participant, uint256 amount);
@@ -36,17 +36,22 @@ contract SavingFarming is Ownable {
 
     constructor(
         address lpToken,
-        address dfyToken,
+        address rewardToken_,
         address rewardWallet,
-        uint256 totalDFYPerMonth,
+        uint256 totalRewardPerMonth,
         address owner_
     ) Ownable() {
         lpContract = IERC20(lpToken);
-        DFY = IERC20(dfyToken);
+        rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
-        _totalDFYPerMonth = totalDFYPerMonth;
+        _totalRewardPerMonth = totalRewardPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
         transferOwnership(owner_);
+    }
+
+    modifier onlyOperator() {
+        require(msg.sender == owner() || msg.sender == address(farmingFactory));
+        _;
     }
 
     function getNumParticipants() external view returns (uint256) {
@@ -73,14 +78,21 @@ contract SavingFarming is Ownable {
         return
             info
                 .amount
-                .mul(_totalDFYPerMonth)
+                .mul(_totalRewardPerMonth)
                 .div(259200)
                 .mul(farmingPeriod)
                 .div(totalLpToken);
     }
 
-    function setTotalDFYPerMonth(uint256 dfyAmount) external onlyOwner {
-        _totalDFYPerMonth = dfyAmount;
+    function setTotalRewardPerMonth(uint256 rewardAmount)
+        external
+        onlyOperator
+    {
+        _totalRewardPerMonth = rewardAmount;
+    }
+
+    function setRewardWallet(address rewardWallet) external onlyOperator {
+        _rewardWallet = rewardWallet;
     }
 
     function deposit(uint256 amount) external {
@@ -155,13 +167,15 @@ contract SavingFarming is Ownable {
 
     function _settle(address participant) private {
         uint256 interest = getCurrentInterest(participant);
-        require(DFY.balanceOf(_rewardWallet) >= interest);
-        require(DFY.allowance(_rewardWallet, address(this)) >= interest);
-        DFY.transferFrom(_rewardWallet, participant, interest);
+        require(rewardToken.balanceOf(_rewardWallet) >= interest);
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= interest
+        );
+        rewardToken.transferFrom(_rewardWallet, participant, interest);
         emit Settle(address(lpContract), participant, interest);
     }
 
-    function emergencyWithdraw() external onlyOwner {
-        lpContract.transfer(owner(), lpContract.balanceOf(address(this)));
+    function emergencyWithdraw(address recipient) external onlyOperator {
+        lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
     }
 }
