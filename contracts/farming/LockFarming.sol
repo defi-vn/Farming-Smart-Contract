@@ -36,6 +36,7 @@ contract LockFarming is Ownable, Pausable {
     event Withdraw(
         address lpToken,
         address participant,
+        uint256 index,
         uint256 amount,
         uint256 interest
     );
@@ -195,6 +196,7 @@ contract LockFarming is Ownable, Pausable {
         emit Withdraw(
             address(lpContract),
             msg.sender,
+            index,
             withdrawnAmount,
             interest
         );
