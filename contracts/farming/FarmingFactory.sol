@@ -17,6 +17,7 @@ contract FarmingFactory is Ownable {
     event NewLockFarming(
         address lpToken,
         uint256 duration,
+        uint8 lockType,
         address lockFarmingContract
     );
 
@@ -47,7 +48,7 @@ contract FarmingFactory is Ownable {
         view
         returns (address)
     {
-        require(lockType > 0 && lockType <= _numLockTypesOf[lpToken]);
+        require(lockType < _numLockTypesOf[lpToken]);
         return _lockFarmingOf[lpToken][lockType];
     }
 
@@ -116,11 +117,15 @@ contract FarmingFactory is Ownable {
             lpTokens.push(lpToken);
             _isLpTokenSupported[lpToken] = true;
         }
-        _lockFarmingOf[lpToken][_numLockTypesOf[lpToken]] = address(
-            newLockContract
-        );
+        uint8 lockType = _numLockTypesOf[lpToken];
+        _lockFarmingOf[lpToken][lockType] = address(newLockContract);
         _numLockTypesOf[lpToken]++;
-        emit NewLockFarming(lpToken, duration, address(newLockContract));
+        emit NewLockFarming(
+            lpToken,
+            duration,
+            lockType,
+            address(newLockContract)
+        );
     }
 
     function emergencyWithdraw(address recipient) external onlyOwner {

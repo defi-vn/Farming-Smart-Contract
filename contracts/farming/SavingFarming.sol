@@ -142,7 +142,7 @@ contract SavingFarming is Ownable, Pausable {
         uint8 numLockTypes = farmingFactory.getNumLockTypes(
             address(lpContract)
         );
-        require(option > 0 && option <= numLockTypes);
+        require(option < numLockTypes);
         address lockFarming = farmingFactory.getLockFarmingContract(
             address(lpContract),
             option

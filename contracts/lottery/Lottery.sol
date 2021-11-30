@@ -115,7 +115,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         for (uint256 i = 0; i < numLpTokens; i++) {
             address lpToken = farmingFactory.lpTokens(i);
             uint8 numLockTypes = farmingFactory.getNumLockTypes(lpToken);
-            for (uint8 j = 1; j <= numLockTypes; j++) {
+            for (uint8 j = 0; j < numLockTypes; j++) {
                 address lockFarmingAddr = farmingFactory.getLockFarmingContract(
                     lpToken,
                     j
