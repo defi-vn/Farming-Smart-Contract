@@ -1,8 +1,12 @@
 const hre = require("hardhat");
+const FileSystem = require("fs");
+const deployInfo = require("../../../deploy.json");
 
 const CONTRACT_NAME = "LpToken";
+const PARTICIPANT = process.env.ADDRESS_3;
 
-async function main() {
+async function deploy() {
+  // Deploy
   const [deployer] = await hre.ethers.getSigners();
   console.log("Deployer:", deployer.address);
   console.log("Balance:", (await deployer.getBalance()).toString());
@@ -10,15 +14,19 @@ async function main() {
   console.log("Deploying " + CONTRACT_NAME + "...");
   const contract = await factory.deploy(
     "0x0000000000000000000000000000000000000001",
-    "0x9B2a4d0A65A1c873B7c60d73D5DdDa37916Aa323"
+    PARTICIPANT
   );
   await contract.deployed();
   console.log(`${CONTRACT_NAME} deployed address: ${contract.address}`);
+
+  // Write the result to deploy.json
+  deployInfo[CONTRACT_NAME] = contract.address;
+  FileSystem.writeFile("deploy.json", JSON.stringify(deployInfo, null, "\t"), err => {
+    if (err)
+      console.log("Error when trying to write to deploy.json!", err);
+    else
+      console.log("Information has been written to deploy.json!");
+  });
 }
 
-main().then(() => {
-  process.exit(0);
-}).catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+deploy();
