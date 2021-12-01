@@ -207,7 +207,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         }
     }
 
-    function emergencyWithdraw() external onlyOwner {
-        LINK.transfer(owner(), LINK.balanceOf(address(this)));
+    function emergencyWithdraw(address recipient) external onlyOwner {
+        LINK.transfer(recipient, LINK.balanceOf(address(this)));
     }
 }
