@@ -22,7 +22,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         SPIN_OVER
     }
     uint256 public currentRound;
-    IERC20 public DFY;
+    IERC20 public rewardToken;
     FarmingFactory public farmingFactory;
     uint256 public numWinners;
     uint256 public nextLotteryTime;
@@ -41,6 +41,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
 
+    event NewLotterySchedule(uint256 round, uint256 startingTime);
     event Reward(
         uint256 round,
         address winner,
@@ -49,7 +50,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     );
 
     constructor(
-        address dfyToken,
+        address rewardToken_,
         address rewardWallet,
         address farmingFactory_,
         uint256 numWinners_
@@ -61,7 +62,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         )
     {
         currentRound = 1;
-        DFY = IERC20(dfyToken);
+        rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
@@ -70,6 +71,9 @@ contract Lottery is Ownable, VRFConsumerBase {
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
         _status = SpinStatus.SPIN_OVER;
+        uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
+        for (uint256 i = 0; i < numLpTokens; i++)
+            _weightOf[farmingFactory.lpTokens(i)] = 1;
     }
 
     function getPrizeHistory(uint256 round)
@@ -85,31 +89,36 @@ contract Lottery is Ownable, VRFConsumerBase {
         view
         returns (uint8[] memory)
     {
-        uint8[] memory weights;
+        uint8[] memory weights = new uint8[](lpTokens.length);
         for (uint256 i = 0; i < lpTokens.length; i++)
             weights[i] = _weightOf[lpTokens[i]];
         return weights;
     }
 
-    function setWeight(address[] memory lpTokens, uint8[] memory weights)
-        external
-        onlyOwner
-    {
+    function setRewardWallet(address rewardWallet) external onlyOwner {
+        _rewardWallet = rewardWallet;
+    }
+
+    function setRewardToken(address rewardToken_) external onlyOwner {
+        rewardToken = IERC20(rewardToken_);
+    }
+
+    function scheduleNextLottery(
+        uint256 startingTime,
+        uint256 numWinners_,
+        address[] memory lpTokens,
+        uint8[] memory weights
+    ) external onlyOwner {
+        require(_remainingPrizes == numWinners);
+        nextLotteryTime = startingTime;
+        numWinners = numWinners_;
+        _remainingPrizes = numWinners_;
         require(lpTokens.length == farmingFactory.getNumSupportedLpTokens());
         for (uint256 i = 0; i < lpTokens.length; i++) {
             require(farmingFactory.checkLpTokenStatus(lpTokens[i]));
             _weightOf[lpTokens[i]] = weights[i];
         }
-    }
-
-    function setNextLotteryTime(uint256 nextTime) external onlyOwner {
-        nextLotteryTime = nextTime;
-    }
-
-    function setNumWinners(uint256 numWinners_) external onlyOwner {
-        require(_remainingPrizes == numWinners);
-        numWinners = numWinners_;
-        _remainingPrizes = numWinners_;
+        emit NewLotterySchedule(currentRound, startingTime);
     }
 
     function _createLotteryList() private {
@@ -156,8 +165,10 @@ contract Lottery is Ownable, VRFConsumerBase {
         require(block.timestamp > nextLotteryTime);
         if (_remainingPrizes == numWinners) _createLotteryList();
         require(_players.length > numWinners && numWinners > 0);
-        require(DFY.balanceOf(_rewardWallet) >= rewardAmount);
-        require(DFY.allowance(_rewardWallet, address(this)) >= rewardAmount);
+        require(rewardToken.balanceOf(_rewardWallet) >= rewardAmount);
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount
+        );
         require(LINK.balanceOf(address(this)) >= _linkFee);
         _currentPrize = prize;
         _rewardAmount = rewardAmount;
@@ -186,7 +197,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         }
         emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
         _prizes.push(Prize(chosenPlayer, _rewardAmount));
-        DFY.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
+        rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;
