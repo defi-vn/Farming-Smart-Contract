@@ -144,14 +144,38 @@ contract FarmingFactory is Ownable {
         for (uint256 i = 0; i < lpTokens.length; i++) {
             address savingFarmingAddr = _savingFarmingOf[lpTokens[i]];
             SavingFarming savingFarming = SavingFarming(savingFarmingAddr);
-            if (address(savingFarming.rewardToken()) == oldRewardToken)
-                savingFarming.pause();
+            if (
+                address(savingFarming.rewardToken()) == oldRewardToken &&
+                !savingFarming.paused()
+            ) savingFarming.pause();
             uint8 numLockTypes = _numLockTypesOf[lpTokens[i]];
             for (uint8 j = 0; j < numLockTypes; j++) {
                 address lockFarmingAddr = _lockFarmingOf[lpTokens[i]][j];
                 LockFarming lockFarming = LockFarming(lockFarmingAddr);
-                if (address(lockFarming.rewardToken()) == oldRewardToken)
-                    lockFarming.pause();
+                if (
+                    address(lockFarming.rewardToken()) == oldRewardToken &&
+                    !lockFarming.paused()
+                ) lockFarming.pause();
+            }
+        }
+    }
+
+    function enableRewardToken(address rewardToken) external onlyOwner {
+        for (uint256 i = 0; i < lpTokens.length; i++) {
+            address savingFarmingAddr = _savingFarmingOf[lpTokens[i]];
+            SavingFarming savingFarming = SavingFarming(savingFarmingAddr);
+            if (
+                address(savingFarming.rewardToken()) == rewardToken &&
+                savingFarming.paused()
+            ) savingFarming.unpause();
+            uint8 numLockTypes = _numLockTypesOf[lpTokens[i]];
+            for (uint8 j = 0; j < numLockTypes; j++) {
+                address lockFarmingAddr = _lockFarmingOf[lpTokens[i]][j];
+                LockFarming lockFarming = LockFarming(lockFarmingAddr);
+                if (
+                    address(lockFarming.rewardToken()) == rewardToken &&
+                    lockFarming.paused()
+                ) lockFarming.unpause();
             }
         }
     }

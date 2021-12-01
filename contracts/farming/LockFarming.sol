@@ -235,4 +235,8 @@ contract LockFarming is Ownable, Pausable {
     function pause() external onlyOperator {
         _pause();
     }
+
+    function unpause() external onlyOperator {
+        _unpause();
+    }
 }

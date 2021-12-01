@@ -313,6 +313,27 @@ describe("Test farming program", () => {
       .attach(this.farmingFactoryContract.address)
       .disableRewardToken(this.dfyContract.address);
   });
+
+  it("Re-enable old reward token, deposit more LPs to SavingFarming", async () => {
+    await this.farmingFactory
+      .connect(this.deployer)
+      .attach(this.farmingFactoryContract.address)
+      .enableRewardToken(this.dfyContract.address);
+    await this.lpFactory
+      .connect(this.participant)
+      .attach(this.lpContract.address)
+      .approve(this.savingFarmingContract.address, 4 * this.depositAmount);
+    await this.savingFarmingFactory
+      .connect(this.participant)
+      .attach(this.savingFarmingContract.address)
+      .deposit(4 * this.depositAmount);
+    let numParticipants = await this.savingFarmingContract.getNumParticipants();
+    let client = await this.savingFarmingContract.participants(0);
+    let farmingAmount = await this.savingFarmingContract.getFarmingAmount(this.participant.address);
+    expect(numParticipants.toString()).to.equal("1");
+    expect(client).to.equal(this.participant.address);
+    expect(farmingAmount.toString()).to.equal((4 * this.depositAmount).toString());
+  });
 });
 
 let sleep = ms => {
