@@ -31,6 +31,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     address private _rewardWallet;
     address[] private _players;
     Prize[] private _prizes;
+    uint256 private _currentPrize;
     uint256 private _rewardAmount;
     bytes32 private _linkKeyHash;
     uint256 private _linkFee;
@@ -40,7 +41,12 @@ contract Lottery is Ownable, VRFConsumerBase {
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
 
-    event Reward(uint256 round, address winner, uint256 rewardAmount);
+    event Reward(
+        uint256 round,
+        address winner,
+        uint256 prize,
+        uint256 rewardAmount
+    );
 
     constructor(
         address dfyToken,
@@ -142,7 +148,10 @@ contract Lottery is Ownable, VRFConsumerBase {
         }
     }
 
-    function spinReward(uint256 rewardAmount) external onlyOwner {
+    function spinReward(uint256 prize, uint256 rewardAmount)
+        external
+        onlyOwner
+    {
         require(_status == SpinStatus.SPIN_OVER);
         require(block.timestamp > nextLotteryTime);
         if (_remainingPrizes == numWinners) _createLotteryList();
@@ -150,6 +159,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         require(DFY.balanceOf(_rewardWallet) >= rewardAmount);
         require(DFY.allowance(_rewardWallet, address(this)) >= rewardAmount);
         require(LINK.balanceOf(address(this)) >= _linkFee);
+        _currentPrize = prize;
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
         requestRandomness(_linkKeyHash, _linkFee);
@@ -174,7 +184,7 @@ contract Lottery is Ownable, VRFConsumerBase {
                 break;
             } else randomNumber -= _farmingAmountOf[_players[i]];
         }
-        emit Reward(currentRound, chosenPlayer, _rewardAmount);
+        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
         _prizes.push(Prize(chosenPlayer, _rewardAmount));
         DFY.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
