@@ -29,10 +29,26 @@ contract LockFarming is Ownable, Pausable {
     event ReceiveFromSavingFarming(
         address lpToken,
         address participant,
+        uint256 index,
         uint256 amount
     );
-    event Deposit(address lpToken, address participant, uint256 amount);
-    event ClaimInterest(address lpToken, address participant, uint256 interest);
+    event Deposit(
+        address lpToken,
+        address participant,
+        uint256 index,
+        uint256 amount
+    );
+    event ClaimInterest(
+        address lpToken,
+        address participant,
+        uint256 index,
+        uint256 interest
+    );
+    event ClaimAllInterest(
+        address lpToken,
+        address participant,
+        uint256 interest
+    );
     event Withdraw(
         address lpToken,
         address participant,
@@ -133,7 +149,12 @@ contract LockFarming is Ownable, Pausable {
         _lockItemsOf[participant].push(
             LockItem(amount, block.timestamp.add(duration), block.timestamp)
         );
-        emit ReceiveFromSavingFarming(address(lpContract), participant, amount);
+        emit ReceiveFromSavingFarming(
+            address(lpContract),
+            participant,
+            _lockItemsOf[participant].length - 1,
+            amount
+        );
     }
 
     function deposit(uint256 amount) external whenNotPaused {
@@ -144,7 +165,12 @@ contract LockFarming is Ownable, Pausable {
         _lockItemsOf[msg.sender].push(
             LockItem(amount, block.timestamp.add(duration), block.timestamp)
         );
-        emit Deposit(address(lpContract), msg.sender, amount);
+        emit Deposit(
+            address(lpContract),
+            msg.sender,
+            _lockItemsOf[msg.sender].length - 1,
+            amount
+        );
     }
 
     function claimInterest(uint256 index) external whenNotPaused {
@@ -155,7 +181,7 @@ contract LockFarming is Ownable, Pausable {
         uint256 interest = getCurrentInterest(msg.sender, index);
         rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.lastClaim = block.timestamp;
-        emit ClaimInterest(address(lpContract), msg.sender, interest);
+        emit ClaimInterest(address(lpContract), msg.sender, index, interest);
     }
 
     function claimAllInterest() external whenNotPaused {
@@ -169,7 +195,7 @@ contract LockFarming is Ownable, Pausable {
             }
         }
         rewardToken.transferFrom(_rewardWallet, msg.sender, totalInterest);
-        emit ClaimInterest(address(lpContract), msg.sender, totalInterest);
+        emit ClaimAllInterest(address(lpContract), msg.sender, totalInterest);
     }
 
     function withdraw(uint256 index) external {

@@ -291,6 +291,28 @@ describe("Test farming program", () => {
     expect(numParticipants.toString()).to.equal("0");
     expect(farmingAmount.toString()).to.equal("0");
   });
+
+  it("Emergency withdraw by 2 ways", async () => {
+    await this.savingFarmingFactory
+      .connect(this.deployer)
+      .attach(this.savingFarmingContract.address)
+      .emergencyWithdraw(this.rewardWallet.address);
+    await this.lockFarmingFactory
+      .connect(this.deployer)
+      .attach(this.lockFarmingContract.address)
+      .emergencyWithdraw(this.rewardWallet.address);
+    await this.farmingFactory
+      .connect(this.deployer)
+      .attach(this.farmingFactoryContract.address)
+      .emergencyWithdraw(this.rewardWallet.address);
+  });
+
+  it("Disable current reward token", async () => {
+    await this.farmingFactory
+      .connect(this.deployer)
+      .attach(this.farmingFactoryContract.address)
+      .disableRewardToken(this.dfyContract.address);
+  });
 });
 
 let sleep = ms => {
