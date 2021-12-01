@@ -1,26 +1,34 @@
 const hre = require("hardhat");
+const FileSystem = require("fs");
+const deployInfo = require("../../../deploy.json");
 
 const CONTRACT_NAME = "Lottery";
+const REWARD_WALLET = process.env.ADDRESS_2;
 
-async function main() {
+async function deploy() {
+  // Deploy
   const [deployer] = await hre.ethers.getSigners();
   console.log("Deployer:", deployer.address);
   console.log("Balance:", (await deployer.getBalance()).toString());
   const factory = await hre.ethers.getContractFactory(CONTRACT_NAME);
   console.log("Deploying " + CONTRACT_NAME + "...");
   const contract = await factory.deploy(
-    "0x68c5376987060Af932E454072E7956FCc398976d",
-    "0x6d1edB03A933c634C11eD712bDb4F276f49d26eb",
-    "0x606787feefd265D260862944a878567102944654",
+    deployInfo.DFYToken,
+    REWARD_WALLET,
+    deployInfo.FarmingFactory,
     1
   );
   await contract.deployed();
   console.log(`${CONTRACT_NAME} deployed address: ${contract.address}`);
+
+  // Write the result to deploy.json
+  deployInfo[CONTRACT_NAME] = contract.address;
+  FileSystem.writeFile("deploy.json", JSON.stringify(deployInfo, null, "\t"), err => {
+    if (err)
+      console.log("Error when trying to write to deploy.json!", err);
+    else
+      console.log("Information has been written to deploy.json!");
+  });
 }
 
-main().then(() => {
-  process.exit(0);
-}).catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+deploy();
