@@ -1,3 +1,4 @@
+require("dotenv").config();
 const Web3 = require("web3");
 const RPC_URLS = {
   "56": process.env.BSC_PROVIDER,

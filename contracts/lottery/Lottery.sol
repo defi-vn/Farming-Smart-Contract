@@ -14,12 +14,13 @@ contract Lottery is Ownable, VRFConsumerBase {
 
     struct Prize {
         address winner;
-        uint256 reward;
+        uint256 prize;
+        uint256 rewardAmount;
     }
 
     enum SpinStatus {
         SPINNING,
-        SPIN_OVER
+        FINISHED
     }
     uint256 public currentRound;
     IERC20 public rewardToken;
@@ -70,7 +71,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         nextLotteryTime = block.timestamp;
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
-        _status = SpinStatus.SPIN_OVER;
+        _status = SpinStatus.FINISHED;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
         for (uint256 i = 0; i < numLpTokens; i++)
             _weightOf[farmingFactory.lpTokens(i)] = 1;
@@ -109,7 +110,8 @@ contract Lottery is Ownable, VRFConsumerBase {
         address[] memory lpTokens,
         uint8[] memory weights
     ) external onlyOwner {
-        require(_remainingPrizes == numWinners);
+        require(_remainingPrizes == 0);
+        currentRound++;
         nextLotteryTime = startingTime;
         numWinners = numWinners_;
         _remainingPrizes = numWinners_;
@@ -161,7 +163,8 @@ contract Lottery is Ownable, VRFConsumerBase {
         external
         onlyOwner
     {
-        require(_status == SpinStatus.SPIN_OVER);
+        require(_remainingPrizes > 0);
+        require(_status == SpinStatus.FINISHED);
         require(block.timestamp > nextLotteryTime);
         if (_remainingPrizes == numWinners) _createLotteryList();
         require(_players.length > numWinners && numWinners > 0);
@@ -180,7 +183,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         internal
         override
     {
-        _status = SpinStatus.SPIN_OVER;
+        _status = SpinStatus.FINISHED;
         address chosenPlayer = _players[0];
         uint256 randomNumber = randomness.mod(_totalLockedLPs);
         for (uint256 i = 0; i < _players.length; i++) {
@@ -195,14 +198,12 @@ contract Lottery is Ownable, VRFConsumerBase {
                 break;
             } else randomNumber -= _farmingAmountOf[_players[i]];
         }
-        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
-        _prizes.push(Prize(chosenPlayer, _rewardAmount));
         rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
+        _prizes.push(Prize(chosenPlayer, _currentPrize, _rewardAmount));
+        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;
-            currentRound++;
-            _remainingPrizes = numWinners;
             delete _prizes;
         }
     }
