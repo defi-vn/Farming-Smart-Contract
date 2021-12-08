@@ -25,8 +25,8 @@ contract SavingFarming is Ownable, Pausable {
     uint256 private _totalRewardPerMonth;
     mapping(address => FarmingInfo) private _farmingInfoOf;
 
-    event Deposit(address lpToken, address participant, uint256 amount);
-    event Withdraw(address lpToken, address participant, uint256 amount);
+    event SavingDeposit(address lpToken, address participant, uint256 amount);
+    event SavingWithdraw(address lpToken, address participant, uint256 amount);
     event TransferToLockFarming(
         address lpToken,
         address participant,
@@ -108,7 +108,7 @@ contract SavingFarming is Ownable, Pausable {
         _farmingInfoOf[msg.sender].amount = _farmingInfoOf[msg.sender]
             .amount
             .add(amount);
-        emit Deposit(address(lpContract), msg.sender, amount);
+        emit SavingDeposit(address(lpContract), msg.sender, amount);
     }
 
     function claimInterest() external whenNotPaused {
@@ -131,7 +131,7 @@ contract SavingFarming is Ownable, Pausable {
         _farmingInfoOf[msg.sender].amount = _farmingInfoOf[msg.sender]
             .amount
             .sub(amount);
-        emit Withdraw(address(lpContract), msg.sender, amount);
+        emit SavingWithdraw(address(lpContract), msg.sender, amount);
     }
 
     function transferToLockFarming(uint256 amount, uint8 option)

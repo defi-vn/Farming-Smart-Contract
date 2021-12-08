@@ -32,7 +32,7 @@ contract LockFarming is Ownable, Pausable {
         uint256 index,
         uint256 amount
     );
-    event Deposit(
+    event LockDeposit(
         address lpToken,
         address participant,
         uint256 index,
@@ -49,7 +49,7 @@ contract LockFarming is Ownable, Pausable {
         address participant,
         uint256 interest
     );
-    event Withdraw(
+    event LockWithdraw(
         address lpToken,
         address participant,
         uint256 index,
@@ -165,7 +165,7 @@ contract LockFarming is Ownable, Pausable {
         _lockItemsOf[msg.sender].push(
             LockItem(amount, block.timestamp.add(duration), block.timestamp)
         );
-        emit Deposit(
+        emit LockDeposit(
             address(lpContract),
             msg.sender,
             _lockItemsOf[msg.sender].length - 1,
@@ -219,7 +219,7 @@ contract LockFarming is Ownable, Pausable {
                     break;
                 }
         }
-        emit Withdraw(
+        emit LockWithdraw(
             address(lpContract),
             msg.sender,
             index,
