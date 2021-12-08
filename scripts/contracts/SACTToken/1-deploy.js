@@ -20,7 +20,9 @@ async function deploy() {
   console.log(`${CONTRACT_NAME} deployed address: ${contract.address}`);
 
   // Write the result to deploy.json
-  deployInfo[CONTRACT_NAME] = contract.address;
+  deployInfo.dev2[CONTRACT_NAME] = contract.address;
+  deployInfo.staging[CONTRACT_NAME] = contract.address;
+  deployInfo.beta[CONTRACT_NAME] = contract.address;
   FileSystem.writeFile("deploy.json", JSON.stringify(deployInfo, null, "\t"), err => {
     if (err)
       console.log("Error when trying to write to deploy.json!", err);

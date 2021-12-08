@@ -2,8 +2,8 @@ const hre = require("hardhat");
 const FileSystem = require("fs");
 const deployInfo = require("../../../deploy.json");
 
-const CONTRACT_NAME = "LpToken";
-const PARTICIPANT = process.env.ADDRESS_3;
+const CONTRACT_NAME = "Lottery";
+const REWARD_WALLET = process.env.ADDRESS_2;
 
 async function deploy() {
   // Deploy
@@ -13,14 +13,16 @@ async function deploy() {
   const factory = await hre.ethers.getContractFactory(CONTRACT_NAME);
   console.log("Deploying " + CONTRACT_NAME + "...");
   const contract = await factory.deploy(
-    "0x0000000000000000000000000000000000000001",
-    PARTICIPANT
+    deployInfo.beta.DFYToken,
+    REWARD_WALLET,
+    deployInfo.beta.FarmingFactory,
+    1
   );
   await contract.deployed();
   console.log(`${CONTRACT_NAME} deployed address: ${contract.address}`);
 
   // Write the result to deploy.json
-  deployInfo[CONTRACT_NAME] = contract.address;
+  deployInfo.beta[CONTRACT_NAME] = contract.address;
   FileSystem.writeFile("deploy.json", JSON.stringify(deployInfo, null, "\t"), err => {
     if (err)
       console.log("Error when trying to write to deploy.json!", err);
