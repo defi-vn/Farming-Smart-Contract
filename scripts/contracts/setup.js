@@ -336,5 +336,5 @@ async function sleep(ms) {
 };
 
 // createTestTransactions();
-// createFarmingPools();
-setup();
+createFarmingPools();
+// setup();
