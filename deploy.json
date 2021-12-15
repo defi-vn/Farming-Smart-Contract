@@ -27,20 +27,20 @@
 		"Lottery": "0xade30ad95e3015bca74a785Be15fa1c3AD17bde2"
 	},
 	"pre-live": {
-		"SACTToken": "",
-		"SISTAToken": "",
-		"USDTToken": "",
-		"DFYToken": "",
-		"LINK": "",
-		"FarmingFactory": "",
-		"Lottery": ""
+		"SACTToken": "0x1ba8c21c623c843cd4c60438d70e7ad50f363fbb",
+		"SISTAToken": "0xca6d25c10dad43ae8be0bc2af4d3cd1114583c08",
+		"USDTToken": "0x55d398326f99059ff775485246999027b3197955",
+		"DFYToken": "0xd98560689c6e748dc37bc410b4d3096b1aa3d8c2",
+		"LINK": "0x404460C6A5EdE2D891e8297795264fDe62ADBB75",
+		"FarmingFactory": "0xbAE00867ACAC38ff60669308cAd1F8363EfC7358",
+		"Lottery": "0xc02624227c79Ac5Ba14B218d801830B12AEc35f1"
 	},
 	"live": {
-		"SACTToken": "",
-		"SISTAToken": "",
-		"USDTToken": "",
-		"DFYToken": "",
-		"LINK": "",
+		"SACTToken": "0x1ba8c21c623c843cd4c60438d70e7ad50f363fbb",
+		"SISTAToken": "0xca6d25c10dad43ae8be0bc2af4d3cd1114583c08",
+		"USDTToken": "0x55d398326f99059ff775485246999027b3197955",
+		"DFYToken": "0xd98560689c6e748dc37bc410b4d3096b1aa3d8c2",
+		"LINK": "0x404460C6A5EdE2D891e8297795264fDe62ADBB75",
 		"FarmingFactory": "",
 		"Lottery": ""
 	}

@@ -16,7 +16,7 @@ async function deploy() {
     deployInfo['pre-live'].DFYToken,
     REWARD_WALLET,
     deployInfo['pre-live'].FarmingFactory,
-    1
+    5
   );
   await contract.deployed();
   console.log(`${CONTRACT_NAME} deployed address: ${contract.address}`);
