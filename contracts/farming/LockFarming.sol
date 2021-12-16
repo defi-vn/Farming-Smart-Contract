@@ -111,11 +111,13 @@ contract LockFarming is Ownable, Pausable {
     {
         require(index < _lockItemsOf[participant].length);
         LockItem memory item = _lockItemsOf[participant][index];
-        uint256 farmingPeriod = block.timestamp - item.lastClaim;
-        if (farmingPeriod > duration) farmingPeriod = duration;
         uint256 totalLpToken = lpContract.balanceOf(address(this));
         if (paused()) return 0;
         if (totalLpToken == 0) return 0;
+        if (item.lastClaim > item.expiredAt) return 0;
+        uint256 farmingPeriod = block.timestamp.sub(item.lastClaim);
+        if (farmingPeriod > item.expiredAt.sub(item.lastClaim))
+            farmingPeriod = item.expiredAt.sub(item.lastClaim);
         return
             item
                 .amount
@@ -177,7 +179,6 @@ contract LockFarming is Ownable, Pausable {
         uint256 numLockItems = _lockItemsOf[msg.sender].length;
         require(index < numLockItems);
         LockItem storage item = _lockItemsOf[msg.sender][index];
-        require(block.timestamp < item.expiredAt);
         uint256 interest = getCurrentInterest(msg.sender, index);
         rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.lastClaim = block.timestamp;
