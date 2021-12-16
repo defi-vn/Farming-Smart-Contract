@@ -180,8 +180,8 @@ contract LockFarming is Ownable, Pausable {
         require(index < numLockItems);
         LockItem storage item = _lockItemsOf[msg.sender][index];
         uint256 interest = getCurrentInterest(msg.sender, index);
-        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.lastClaim = block.timestamp;
+        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         emit ClaimInterest(address(lpContract), msg.sender, index, interest);
     }
 
@@ -205,9 +205,7 @@ contract LockFarming is Ownable, Pausable {
         LockItem storage item = _lockItemsOf[msg.sender][index];
         require(block.timestamp >= item.expiredAt);
         uint256 withdrawnAmount = item.amount;
-        lpContract.transfer(msg.sender, withdrawnAmount);
         uint256 interest = getCurrentInterest(msg.sender, index);
-        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         item.amount = _lockItemsOf[msg.sender][numLockItems - 1].amount;
         item.expiredAt = _lockItemsOf[msg.sender][numLockItems - 1].expiredAt;
         item.lastClaim = _lockItemsOf[msg.sender][numLockItems - 1].lastClaim;
@@ -220,6 +218,8 @@ contract LockFarming is Ownable, Pausable {
                     break;
                 }
         }
+        lpContract.transfer(msg.sender, withdrawnAmount);
+        rewardToken.transferFrom(_rewardWallet, msg.sender, interest);
         emit LockWithdraw(
             address(lpContract),
             msg.sender,
