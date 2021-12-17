@@ -1,0 +1,7 @@
+node_modules
+.vscode
+build
+bin
+artifacts
+cache
+.env
