@@ -18,7 +18,7 @@ const SUPPORTED_LPTOKENS = [
     router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
   },
   {
-    pair: "0xb1df80a6A12eA3d161071d7EFf456cc078428186",
+    pair: "0x52df67d03C094f601300c9Fe84c9A5139521FfAc",
     router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
   },
   {
