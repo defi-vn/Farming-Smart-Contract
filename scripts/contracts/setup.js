@@ -151,26 +151,26 @@ async function setup() {
   }
 
   // Approve reward token for Lottery contract
-  // console.log(`Approving reward token for Lottery contract at ${DEPLOY_INFO[ENVIRONMENT].Lottery}...`);
-  // await write(
-  //   CHAIN_ID,
-  //   DEPLOY_INFO[ENVIRONMENT].DFYToken,
-  //   DFY_TOKEN_ABI,
-  //   "approve",
-  //   [DEPLOY_INFO[ENVIRONMENT].Lottery, ERC20_AMOUNT],
-  //   [REWARD_WALLET, REWARD_WALLET_PRIVK]
-  // );
+  console.log(`Approving reward token for Lottery contract at ${DEPLOY_INFO[ENVIRONMENT].Lottery}...`);
+  await write(
+    CHAIN_ID,
+    DEPLOY_INFO[ENVIRONMENT].DFYToken,
+    DFY_TOKEN_ABI,
+    "approve",
+    [DEPLOY_INFO[ENVIRONMENT].Lottery, ERC20_AMOUNT],
+    [REWARD_WALLET, REWARD_WALLET_PRIVK]
+  );
 
   // Send some LINKs to Lottery contract
-  // console.log("Sending some LINKs to Lottery contract...");
-  // await write(
-  //   CHAIN_ID,
-  //   DEPLOY_INFO[ENVIRONMENT].LINK,
-  //   DFY_TOKEN_ABI,
-  //   "transfer",
-  //   [DEPLOY_INFO[ENVIRONMENT].Lottery, "1000000000000000000"],
-  //   [DEPLOYER, DEPLOYER_PRIVK]
-  // );
+  console.log("Sending some LINKs to Lottery contract...");
+  await write(
+    CHAIN_ID,
+    DEPLOY_INFO[ENVIRONMENT].LINK,
+    DFY_TOKEN_ABI,
+    "transfer",
+    [DEPLOY_INFO[ENVIRONMENT].Lottery, "1000000000000000000"],
+    [DEPLOYER, DEPLOYER_PRIVK]
+  );
 
   return contractCollection;
 }
