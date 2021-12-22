@@ -67,8 +67,6 @@ contract Lottery is Ownable, VRFConsumerBase {
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
-        _remainingPrizes = numWinners_;
-        nextLotteryTime = block.timestamp;
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
         _status = SpinStatus.FINISHED;
