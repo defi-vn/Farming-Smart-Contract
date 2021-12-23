@@ -24,6 +24,7 @@ contract SavingFarming is Ownable, Pausable {
     address private _rewardWallet;
     uint256 private _totalRewardPerMonth;
     mapping(address => FarmingInfo) private _farmingInfoOf;
+    mapping(address => bool) private _operators;
 
     event SavingDeposit(address lpToken, address participant, uint256 amount);
     event SavingWithdraw(address lpToken, address participant, uint256 amount);
@@ -47,11 +48,13 @@ contract SavingFarming is Ownable, Pausable {
         _rewardWallet = rewardWallet;
         _totalRewardPerMonth = totalRewardPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
+        _operators[owner_] = true;
+        _operators[msg.sender] = true;
         transferOwnership(owner_);
     }
 
     modifier onlyOperator() {
-        require(msg.sender == owner() || msg.sender == address(farmingFactory));
+        require(_operators[msg.sender], "Caller is not operator");
         _;
     }
 
@@ -86,6 +89,15 @@ contract SavingFarming is Ownable, Pausable {
                 .div(totalLpToken);
     }
 
+    function setOperators(address[] memory operators, bool[] memory isOperators)
+        external
+        onlyOwner
+    {
+        require(operators.length == isOperators.length, "Lengths mismatch");
+        for (uint256 i = 0; i < operators.length; i++)
+            _operators[operators[i]] = isOperators[i];
+    }
+
     function setTotalRewardPerMonth(uint256 rewardAmount)
         external
         onlyOperator
@@ -98,8 +110,14 @@ contract SavingFarming is Ownable, Pausable {
     }
 
     function deposit(uint256 amount) external whenNotPaused {
-        require(lpContract.balanceOf(msg.sender) >= amount);
-        require(lpContract.allowance(msg.sender, address(this)) >= amount);
+        require(
+            lpContract.balanceOf(msg.sender) >= amount,
+            "Not enough balance"
+        );
+        require(
+            lpContract.allowance(msg.sender, address(this)) >= amount,
+            "Not enough allowance"
+        );
         _settle(msg.sender);
         lpContract.transferFrom(msg.sender, address(this), amount);
         if (_farmingInfoOf[msg.sender].amount == 0)
@@ -117,7 +135,10 @@ contract SavingFarming is Ownable, Pausable {
     }
 
     function withdraw(uint256 amount) external {
-        require(_farmingInfoOf[msg.sender].amount >= amount);
+        require(
+            _farmingInfoOf[msg.sender].amount >= amount,
+            "Not enough amount to withdraw"
+        );
         _settle(msg.sender);
         lpContract.transfer(msg.sender, amount);
         if (_farmingInfoOf[msg.sender].amount == amount)
@@ -138,16 +159,19 @@ contract SavingFarming is Ownable, Pausable {
         external
         whenNotPaused
     {
-        require(_farmingInfoOf[msg.sender].amount >= amount);
+        require(
+            _farmingInfoOf[msg.sender].amount >= amount,
+            "Not enough amount to transfer"
+        );
         uint8 numLockTypes = farmingFactory.getNumLockTypes(
             address(lpContract)
         );
-        require(option < numLockTypes);
+        require(option < numLockTypes, "Option out of range");
         address lockFarming = farmingFactory.getLockFarmingContract(
             address(lpContract),
             option
         );
-        require(lockFarming != address(0));
+        require(lockFarming != address(0), "Lock farming pool does not exists");
         _settle(msg.sender);
         lpContract.transfer(lockFarming, amount);
         LockFarming(lockFarming).receiveLpFromSavingFarming(msg.sender, amount);
@@ -172,15 +196,23 @@ contract SavingFarming is Ownable, Pausable {
 
     function _settle(address participant) private {
         uint256 interest = getCurrentInterest(participant);
-        require(rewardToken.balanceOf(_rewardWallet) >= interest);
         require(
-            rewardToken.allowance(_rewardWallet, address(this)) >= interest
+            rewardToken.balanceOf(_rewardWallet) >= interest,
+            "Not enough balance to award"
+        );
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= interest,
+            "Not enough allowance to award"
         );
         rewardToken.transferFrom(_rewardWallet, participant, interest);
         emit Settle(address(lpContract), participant, interest);
     }
 
-    function emergencyWithdraw(address recipient) external onlyOperator {
+    function emergencyWithdraw(address recipient) external {
+        require(
+            msg.sender == owner() || msg.sender == address(farmingFactory),
+            "Only owner or factory contract can withdraw"
+        );
         lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
     }
 

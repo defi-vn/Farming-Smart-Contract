@@ -41,6 +41,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     mapping(uint256 => Prize[]) private _prizeHistory;
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
+    mapping(address => bool) private _operators;
 
     event NewLotterySchedule(uint256 round, uint256 startingTime);
     event Reward(
@@ -62,19 +63,23 @@ contract Lottery is Ownable, VRFConsumerBase {
             0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06
         )
     {
-        currentRound = 1;
+        currentRound = 0;
         rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
         numWinners = numWinners_;
-        _remainingPrizes = numWinners_;
-        nextLotteryTime = block.timestamp;
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
         _status = SpinStatus.FINISHED;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
+        _operators[msg.sender] = true;
         for (uint256 i = 0; i < numLpTokens; i++)
             _weightOf[farmingFactory.lpTokens(i)] = 1;
+    }
+
+    modifier onlyOperator() {
+        require(_operators[msg.sender], "Caller is not operator");
+        _;
     }
 
     function getPrizeHistory(uint256 round)
@@ -96,11 +101,20 @@ contract Lottery is Ownable, VRFConsumerBase {
         return weights;
     }
 
-    function setRewardWallet(address rewardWallet) external onlyOwner {
+    function setOperators(address[] memory operators, bool[] memory isOperators)
+        external
+        onlyOwner
+    {
+        require(operators.length == isOperators.length, "Length mismatch");
+        for (uint256 i = 0; i < operators.length; i++)
+            _operators[operators[i]] = isOperators[i];
+    }
+
+    function setRewardWallet(address rewardWallet) external onlyOperator {
         _rewardWallet = rewardWallet;
     }
 
-    function setRewardToken(address rewardToken_) external onlyOwner {
+    function setRewardToken(address rewardToken_) external onlyOperator {
         rewardToken = IERC20(rewardToken_);
     }
 
@@ -109,15 +123,18 @@ contract Lottery is Ownable, VRFConsumerBase {
         uint256 numWinners_,
         address[] memory lpTokens,
         uint8[] memory weights
-    ) external onlyOwner {
-        require(_remainingPrizes == 0);
+    ) external onlyOperator {
+        require(_remainingPrizes == 0, "Last round not completed");
         currentRound++;
         nextLotteryTime = startingTime;
         numWinners = numWinners_;
         _remainingPrizes = numWinners_;
-        require(lpTokens.length == farmingFactory.getNumSupportedLpTokens());
+        require(lpTokens.length == weights.length, "Lengths mismatch");
         for (uint256 i = 0; i < lpTokens.length; i++) {
-            require(farmingFactory.checkLpTokenStatus(lpTokens[i]));
+            require(
+                farmingFactory.checkLpTokenStatus(lpTokens[i]),
+                "LP token not supported"
+            );
             _weightOf[lpTokens[i]] = weights[i];
         }
         emit NewLotterySchedule(currentRound, startingTime);
@@ -161,22 +178,57 @@ contract Lottery is Ownable, VRFConsumerBase {
 
     function spinReward(uint256 prize, uint256 rewardAmount)
         external
-        onlyOwner
+        onlyOperator
     {
-        require(_remainingPrizes > 0);
-        require(_status == SpinStatus.FINISHED);
-        require(block.timestamp > nextLotteryTime);
+        require(_remainingPrizes > 0, "Out of prizes");
+        require(_status == SpinStatus.FINISHED, "Last spin not completed");
+        require(block.timestamp > nextLotteryTime, "Not spin time yet");
         if (_remainingPrizes == numWinners) _createLotteryList();
-        require(_players.length > numWinners && numWinners > 0);
-        require(rewardToken.balanceOf(_rewardWallet) >= rewardAmount);
+        require(_players.length > _remainingPrizes, "Not enough players");
         require(
-            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount
+            rewardToken.balanceOf(_rewardWallet) >= rewardAmount,
+            "Not enough amount to award"
         );
-        require(LINK.balanceOf(address(this)) >= _linkFee);
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount,
+            "Not enough allowance to award"
+        );
+        require(
+            LINK.balanceOf(address(this)) >= _linkFee,
+            "Not enough LINK to spin"
+        );
         _currentPrize = prize;
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
-        requestRandomness(_linkKeyHash, _linkFee);
+        // requestRandomness(_linkKeyHash, _linkFee);
+
+        // TODO: Use Chainlink VRF and delete from here
+        _status = SpinStatus.FINISHED;
+        address chosenPlayer = _players[0];
+        uint256 randomness = uint256(
+            keccak256(abi.encodePacked(block.timestamp))
+        );
+        uint256 randomNumber = randomness.mod(_totalLockedLPs);
+        for (uint256 i = 0; i < _players.length; i++) {
+            if (randomNumber < _farmingAmountOf[_players[i]]) {
+                chosenPlayer = _players[i];
+                delete _isPlayer[_players[i]];
+                _totalLockedLPs = _totalLockedLPs.sub(
+                    _farmingAmountOf[_players[i]]
+                );
+                _players[i] = _players[_players.length - 1];
+                _players.pop();
+                break;
+            } else randomNumber -= _farmingAmountOf[_players[i]];
+        }
+        rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
+        _prizes.push(Prize(chosenPlayer, _currentPrize, _rewardAmount));
+        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
+        if (_remainingPrizes > 0) _remainingPrizes--;
+        if (_remainingPrizes == 0) {
+            _prizeHistory[currentRound] = _prizes;
+            delete _prizes;
+        }
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness)

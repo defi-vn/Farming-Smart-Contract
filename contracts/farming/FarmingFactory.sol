@@ -12,6 +12,7 @@ contract FarmingFactory is Ownable {
     mapping(address => address) private _savingFarmingOf;
     mapping(address => uint8) private _numLockTypesOf;
     mapping(address => mapping(uint8 => address)) private _lockFarmingOf;
+    mapping(address => bool) private _operators;
 
     event NewSavingFarming(address lpToken, address savingFarmingContract);
     event NewLockFarming(
@@ -21,7 +22,14 @@ contract FarmingFactory is Ownable {
         address lockFarmingContract
     );
 
-    constructor() Ownable() {}
+    constructor() Ownable() {
+        _operators[msg.sender] = true;
+    }
+
+    modifier onlyOperator() {
+        require(_operators[msg.sender], "Caller is not operator");
+        _;
+    }
 
     function checkLpTokenStatus(address lpToken) external view returns (bool) {
         return _isLpTokenSupported[lpToken];
@@ -48,11 +56,26 @@ contract FarmingFactory is Ownable {
         view
         returns (address)
     {
-        require(lockType < _numLockTypesOf[lpToken]);
+        require(
+            lockType < _numLockTypesOf[lpToken],
+            "Lock type does not exist"
+        );
         return _lockFarmingOf[lpToken][lockType];
     }
 
-    function setTotalRewardPerMonth(uint256 rewardAmount) external onlyOwner {
+    function setOperators(address[] memory operators, bool[] memory isOperators)
+        external
+        onlyOwner
+    {
+        require(operators.length == isOperators.length, "Lengths mismatch");
+        for (uint256 i = 0; i < operators.length; i++)
+            _operators[operators[i]] = isOperators[i];
+    }
+
+    function setTotalRewardPerMonth(uint256 rewardAmount)
+        external
+        onlyOperator
+    {
         for (uint256 i = 0; i < lpTokens.length; i++) {
             address savingFarming = _savingFarmingOf[lpTokens[i]];
             SavingFarming(savingFarming).setTotalRewardPerMonth(rewardAmount);
@@ -64,7 +87,7 @@ contract FarmingFactory is Ownable {
         }
     }
 
-    function setRewardWallet(address rewardWallet) external onlyOwner {
+    function setRewardWallet(address rewardWallet) external onlyOperator {
         for (uint256 i = 0; i < lpTokens.length; i++) {
             address savingFarming = _savingFarmingOf[lpTokens[i]];
             SavingFarming(savingFarming).setRewardWallet(rewardWallet);
@@ -81,8 +104,11 @@ contract FarmingFactory is Ownable {
         address rewardToken,
         address rewardWallet,
         uint256 totalRewardPerMonth
-    ) external onlyOwner {
-        require(_savingFarmingOf[lpToken] == address(0));
+    ) external onlyOperator {
+        require(
+            _savingFarmingOf[lpToken] == address(0),
+            "Saving farming pool created before"
+        );
         SavingFarming newSavingContract = new SavingFarming(
             lpToken,
             rewardToken,
@@ -104,7 +130,7 @@ contract FarmingFactory is Ownable {
         address rewardToken,
         address rewardWallet,
         uint256 totalRewardPerMonth
-    ) external onlyOwner {
+    ) external onlyOperator {
         LockFarming newLockContract = new LockFarming(
             duration,
             lpToken,
@@ -140,7 +166,7 @@ contract FarmingFactory is Ownable {
         }
     }
 
-    function disableRewardToken(address oldRewardToken) external onlyOwner {
+    function disableRewardToken(address oldRewardToken) external onlyOperator {
         for (uint256 i = 0; i < lpTokens.length; i++) {
             address savingFarmingAddr = _savingFarmingOf[lpTokens[i]];
             SavingFarming savingFarming = SavingFarming(savingFarmingAddr);
@@ -160,7 +186,7 @@ contract FarmingFactory is Ownable {
         }
     }
 
-    function enableRewardToken(address rewardToken) external onlyOwner {
+    function enableRewardToken(address rewardToken) external onlyOperator {
         for (uint256 i = 0; i < lpTokens.length; i++) {
             address savingFarmingAddr = _savingFarmingOf[lpTokens[i]];
             SavingFarming savingFarming = SavingFarming(savingFarmingAddr);

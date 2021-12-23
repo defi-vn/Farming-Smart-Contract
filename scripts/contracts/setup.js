@@ -2,6 +2,7 @@ require("dotenv").config();
 const { read, write } = require("../common/web3-service");
 const DEPLOY_INFO = require("../../deploy.json");
 const FARMING_FACTORY_ABI = require("../../artifacts/contracts/farming/FarmingFactory.sol/FarmingFactory.json").abi;
+const LOTTERY_ABI = require("../../artifacts/contracts/lottery/Lottery.sol/Lottery.json").abi;
 const DFY_TOKEN_ABI = require("../../artifacts/contracts/tokens/DFYToken.sol/DFYToken.json").abi;
 const DEPLOYER = process.env.ADDRESS_1;
 const DEPLOYER_PRIVK = process.env.PRIVATE_KEY_1;
@@ -12,22 +13,23 @@ const SUPPORTED_ENVIRONMENTS = ["dev2", "staging", "beta", "pre-live", "live"];
 const ERC20_AMOUNT = "500000000000000000000000000";
 const TOTAL_REWARD_PER_MONTH = "100000000000000000000";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const OPERATORS = ["0x752F4d07DB335ae231014A74d23D98fcF99f7fe9"];
 const SUPPORTED_LPTOKENS = [
   {
-    pair: "0xebeef1602b553ce64a875128584b81046025748d",
-    router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
+    pair: "0xe8ea253701EcCA7c3DE03E801850cf46573BE88c",
+    router: "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
   },
   {
-    pair: "0x52df67d03C094f601300c9Fe84c9A5139521FfAc",
-    router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
+    pair: "0x31e2eE9573273C7e89105b6ca5deB8aeA87D45b6",
+    router: "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
   },
   {
-    pair: "0xc928A0502658DAB87894a1Fc75667aec8e3031AF",
-    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7"
+    pair: "0xb38531b3d3872965A7965B124f982B39dd36eF0B",
+    router: "0x3380ae82e39e42ca34ebed69af67faa0683bb5c1"
   },
   {
-    pair: "0x82ecF986eEf808d03c1eC64E9f277269b3A00e45",
-    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7"
+    pair: "0x3014EE01031567F49c9f80cFEB64828dD97876Ce",
+    router: "0x3380ae82e39e42ca34ebed69af67faa0683bb5c1"
   }
 ];
 
@@ -95,7 +97,6 @@ async function setup() {
   const CHAIN_ID = (ENVIRONMENT === "pre-live" || ENVIRONMENT === "live") ? 56 : 97;
 
   console.log("==============SETUP===================");
-  let contractCollection = [];
   // Approve reward token for all SavingFarming and LockFarming contracts
   for (let i = 0; i < SUPPORTED_LPTOKENS.length; i++) {
     let lpToken = SUPPORTED_LPTOKENS[i].pair;
@@ -147,19 +148,18 @@ async function setup() {
         [REWARD_WALLET, REWARD_WALLET_PRIVK]
       );
     }
-    contractCollection.push(info);
   }
 
   // Approve reward token for Lottery contract
-  // console.log(`Approving reward token for Lottery contract at ${DEPLOY_INFO[ENVIRONMENT].Lottery}...`);
-  // await write(
-  //   CHAIN_ID,
-  //   DEPLOY_INFO[ENVIRONMENT].DFYToken,
-  //   DFY_TOKEN_ABI,
-  //   "approve",
-  //   [DEPLOY_INFO[ENVIRONMENT].Lottery, ERC20_AMOUNT],
-  //   [REWARD_WALLET, REWARD_WALLET_PRIVK]
-  // );
+  console.log(`Approving reward token for Lottery contract at ${DEPLOY_INFO[ENVIRONMENT].Lottery}...`);
+  await write(
+    CHAIN_ID,
+    DEPLOY_INFO[ENVIRONMENT].DFYToken,
+    DFY_TOKEN_ABI,
+    "approve",
+    [DEPLOY_INFO[ENVIRONMENT].Lottery, ERC20_AMOUNT],
+    [REWARD_WALLET, REWARD_WALLET_PRIVK]
+  );
 
   // Send some LINKs to Lottery contract
   // console.log("Sending some LINKs to Lottery contract...");
@@ -172,7 +172,19 @@ async function setup() {
   //   [DEPLOYER, DEPLOYER_PRIVK]
   // );
 
-  return contractCollection;
+  // Set Lottery's operator roles
+  console.log("Setting Lottery's operator roles...");
+  let isOperators = [];
+  for (let i = 0; i < OPERATORS.length; i++)
+    isOperators.push(true);
+  await write(
+    CHAIN_ID,
+    DEPLOY_INFO[ENVIRONMENT].Lottery,
+    LOTTERY_ABI,
+    "setOperators",
+    [OPERATORS, isOperators],
+    [DEPLOYER, DEPLOYER_PRIVK]
+  );
 }
 
 createFarmingPools();
