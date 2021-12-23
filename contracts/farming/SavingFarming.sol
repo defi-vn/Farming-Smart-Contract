@@ -24,6 +24,7 @@ contract SavingFarming is Ownable, Pausable {
     address private _rewardWallet;
     uint256 private _totalRewardPerMonth;
     mapping(address => FarmingInfo) private _farmingInfoOf;
+    mapping(address => bool) private _operators;
 
     event SavingDeposit(address lpToken, address participant, uint256 amount);
     event SavingWithdraw(address lpToken, address participant, uint256 amount);
@@ -47,14 +48,13 @@ contract SavingFarming is Ownable, Pausable {
         _rewardWallet = rewardWallet;
         _totalRewardPerMonth = totalRewardPerMonth;
         farmingFactory = FarmingFactory(msg.sender);
+        _operators[owner_] = true;
+        _operators[msg.sender] = true;
         transferOwnership(owner_);
     }
 
     modifier onlyOperator() {
-        require(
-            msg.sender == owner() || msg.sender == address(farmingFactory),
-            "Caller is not operator"
-        );
+        require(_operators[msg.sender], "Caller is not operator");
         _;
     }
 
@@ -87,6 +87,15 @@ contract SavingFarming is Ownable, Pausable {
                 .div(259200)
                 .mul(farmingPeriod)
                 .div(totalLpToken);
+    }
+
+    function setOperators(address[] memory operators, bool[] memory isOperators)
+        external
+        onlyOwner
+    {
+        require(operators.length == isOperators.length, "Lengths mismatch");
+        for (uint256 i = 0; i < operators.length; i++)
+            _operators[operators[i]] = isOperators[i];
     }
 
     function setTotalRewardPerMonth(uint256 rewardAmount)
@@ -199,7 +208,11 @@ contract SavingFarming is Ownable, Pausable {
         emit Settle(address(lpContract), participant, interest);
     }
 
-    function emergencyWithdraw(address recipient) external onlyOperator {
+    function emergencyWithdraw(address recipient) external {
+        require(
+            msg.sender == owner() || msg.sender == address(farmingFactory),
+            "Only owner or factory contract can withdraw"
+        );
         lpContract.transfer(recipient, lpContract.balanceOf(address(this)));
     }
 

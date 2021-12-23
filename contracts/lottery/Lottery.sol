@@ -41,6 +41,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     mapping(uint256 => Prize[]) private _prizeHistory;
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
+    mapping(address => bool) private _operators;
 
     event NewLotterySchedule(uint256 round, uint256 startingTime);
     event Reward(
@@ -71,8 +72,14 @@ contract Lottery is Ownable, VRFConsumerBase {
         _linkFee = 10**17;
         _status = SpinStatus.FINISHED;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
+        _operators[msg.sender] = true;
         for (uint256 i = 0; i < numLpTokens; i++)
             _weightOf[farmingFactory.lpTokens(i)] = 1;
+    }
+
+    modifier onlyOperator() {
+        require(_operators[msg.sender], "Caller is not operator");
+        _;
     }
 
     function getPrizeHistory(uint256 round)
@@ -94,11 +101,20 @@ contract Lottery is Ownable, VRFConsumerBase {
         return weights;
     }
 
-    function setRewardWallet(address rewardWallet) external onlyOwner {
+    function setOperators(address[] memory operators, bool[] memory isOperators)
+        external
+        onlyOwner
+    {
+        require(operators.length == isOperators.length, "Length mismatch");
+        for (uint256 i = 0; i < operators.length; i++)
+            _operators[operators[i]] = isOperators[i];
+    }
+
+    function setRewardWallet(address rewardWallet) external onlyOperator {
         _rewardWallet = rewardWallet;
     }
 
-    function setRewardToken(address rewardToken_) external onlyOwner {
+    function setRewardToken(address rewardToken_) external onlyOperator {
         rewardToken = IERC20(rewardToken_);
     }
 
@@ -107,7 +123,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         uint256 numWinners_,
         address[] memory lpTokens,
         uint8[] memory weights
-    ) external onlyOwner {
+    ) external onlyOperator {
         require(_remainingPrizes == 0, "Last round not completed");
         currentRound++;
         nextLotteryTime = startingTime;
@@ -162,7 +178,7 @@ contract Lottery is Ownable, VRFConsumerBase {
 
     function spinReward(uint256 prize, uint256 rewardAmount)
         external
-        onlyOwner
+        onlyOperator
     {
         require(_remainingPrizes > 0, "Out of prizes");
         require(_status == SpinStatus.FINISHED, "Last spin not completed");
@@ -184,7 +200,35 @@ contract Lottery is Ownable, VRFConsumerBase {
         _currentPrize = prize;
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
-        requestRandomness(_linkKeyHash, _linkFee);
+        // requestRandomness(_linkKeyHash, _linkFee);
+
+        // TODO: Use Chainlink VRF and delete from here
+        _status = SpinStatus.FINISHED;
+        address chosenPlayer = _players[0];
+        uint256 randomness = uint256(
+            keccak256(abi.encodePacked(block.timestamp))
+        );
+        uint256 randomNumber = randomness.mod(_totalLockedLPs);
+        for (uint256 i = 0; i < _players.length; i++) {
+            if (randomNumber < _farmingAmountOf[_players[i]]) {
+                chosenPlayer = _players[i];
+                delete _isPlayer[_players[i]];
+                _totalLockedLPs = _totalLockedLPs.sub(
+                    _farmingAmountOf[_players[i]]
+                );
+                _players[i] = _players[_players.length - 1];
+                _players.pop();
+                break;
+            } else randomNumber -= _farmingAmountOf[_players[i]];
+        }
+        rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
+        _prizes.push(Prize(chosenPlayer, _currentPrize, _rewardAmount));
+        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
+        if (_remainingPrizes > 0) _remainingPrizes--;
+        if (_remainingPrizes == 0) {
+            _prizeHistory[currentRound] = _prizes;
+            delete _prizes;
+        }
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness)

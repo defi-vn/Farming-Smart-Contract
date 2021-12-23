@@ -2,6 +2,7 @@ require("dotenv").config();
 const { read, write } = require("../common/web3-service");
 const DEPLOY_INFO = require("../../deploy.json");
 const FARMING_FACTORY_ABI = require("../../artifacts/contracts/farming/FarmingFactory.sol/FarmingFactory.json").abi;
+const LOTTERY_ABI = require("../../artifacts/contracts/lottery/Lottery.sol/Lottery.json").abi;
 const DFY_TOKEN_ABI = require("../../artifacts/contracts/tokens/DFYToken.sol/DFYToken.json").abi;
 const DEPLOYER = process.env.ADDRESS_1;
 const DEPLOYER_PRIVK = process.env.PRIVATE_KEY_1;
@@ -12,6 +13,7 @@ const SUPPORTED_ENVIRONMENTS = ["dev2", "staging", "beta", "pre-live", "live"];
 const ERC20_AMOUNT = "500000000000000000000000000";
 const TOTAL_REWARD_PER_MONTH = "2000000000000000000";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const OPERATORS = ["0x752F4d07DB335ae231014A74d23D98fcF99f7fe9"];
 const SUPPORTED_LPTOKENS = [
   {
     pair: "0xe8ea253701EcCA7c3DE03E801850cf46573BE88c",
@@ -160,13 +162,27 @@ async function setup() {
   );
 
   // Send some LINKs to Lottery contract
-  console.log("Sending some LINKs to Lottery contract...");
+  // console.log("Sending some LINKs to Lottery contract...");
+  // await write(
+  //   CHAIN_ID,
+  //   DEPLOY_INFO[ENVIRONMENT].LINK,
+  //   DFY_TOKEN_ABI,
+  //   "transfer",
+  //   [DEPLOY_INFO[ENVIRONMENT].Lottery, "1000000000000000000"],
+  //   [DEPLOYER, DEPLOYER_PRIVK]
+  // );
+
+  // Set Lottery's operator roles
+  console.log("Setting Lottery's operator roles...");
+  let isOperators = [];
+  for (let i = 0; i < OPERATORS.length; i++)
+    isOperators.push(true);
   await write(
     CHAIN_ID,
-    DEPLOY_INFO[ENVIRONMENT].LINK,
-    DFY_TOKEN_ABI,
-    "transfer",
-    [DEPLOY_INFO[ENVIRONMENT].Lottery, "1000000000000000000"],
+    DEPLOY_INFO[ENVIRONMENT].Lottery,
+    LOTTERY_ABI,
+    "setOperators",
+    [OPERATORS, isOperators],
     [DEPLOYER, DEPLOYER_PRIVK]
   );
 }
