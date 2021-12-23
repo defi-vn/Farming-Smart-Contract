@@ -75,7 +75,10 @@ contract LockFarming is Ownable, Pausable {
     }
 
     modifier onlyOperator() {
-        require(msg.sender == owner() || msg.sender == address(farmingFactory));
+        require(
+            msg.sender == owner() || msg.sender == address(farmingFactory),
+            "Caller is not operator"
+        );
         _;
     }
 
@@ -109,7 +112,7 @@ contract LockFarming is Ownable, Pausable {
         view
         returns (uint256)
     {
-        require(index < _lockItemsOf[participant].length);
+        require(index < _lockItemsOf[participant].length, "Index out of range");
         LockItem memory item = _lockItemsOf[participant][index];
         uint256 totalLpToken = lpContract.balanceOf(address(this));
         if (paused()) return 0;
@@ -145,7 +148,10 @@ contract LockFarming is Ownable, Pausable {
         address savingFarming = farmingFactory.getSavingFarmingContract(
             address(lpContract)
         );
-        require(msg.sender == savingFarming);
+        require(
+            msg.sender == savingFarming,
+            "Caller is not saving farming pool"
+        );
         if (_lockItemsOf[participant].length == 0)
             participants.push(participant);
         _lockItemsOf[participant].push(
@@ -160,8 +166,14 @@ contract LockFarming is Ownable, Pausable {
     }
 
     function deposit(uint256 amount) external whenNotPaused {
-        require(lpContract.balanceOf(msg.sender) >= amount);
-        require(lpContract.allowance(msg.sender, address(this)) >= amount);
+        require(
+            lpContract.balanceOf(msg.sender) >= amount,
+            "Not enough balance"
+        );
+        require(
+            lpContract.allowance(msg.sender, address(this)) >= amount,
+            "Not enough allowance"
+        );
         lpContract.transferFrom(msg.sender, address(this), amount);
         if (_lockItemsOf[msg.sender].length == 0) participants.push(msg.sender);
         _lockItemsOf[msg.sender].push(
@@ -177,7 +189,7 @@ contract LockFarming is Ownable, Pausable {
 
     function claimInterest(uint256 index) external whenNotPaused {
         uint256 numLockItems = _lockItemsOf[msg.sender].length;
-        require(index < numLockItems);
+        require(index < numLockItems, "Index out of range");
         LockItem storage item = _lockItemsOf[msg.sender][index];
         uint256 interest = getCurrentInterest(msg.sender, index);
         item.lastClaim = block.timestamp;
@@ -201,9 +213,12 @@ contract LockFarming is Ownable, Pausable {
 
     function withdraw(uint256 index) external {
         uint256 numLockItems = _lockItemsOf[msg.sender].length;
-        require(index < numLockItems);
+        require(index < numLockItems, "Index out of range");
         LockItem storage item = _lockItemsOf[msg.sender][index];
-        require(block.timestamp >= item.expiredAt);
+        require(
+            block.timestamp >= item.expiredAt,
+            "Cannot withdraw at this time"
+        );
         uint256 withdrawnAmount = item.amount;
         uint256 interest = getCurrentInterest(msg.sender, index);
         item.amount = _lockItemsOf[msg.sender][numLockItems - 1].amount;

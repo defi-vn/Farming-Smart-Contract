@@ -48,7 +48,10 @@ contract FarmingFactory is Ownable {
         view
         returns (address)
     {
-        require(lockType < _numLockTypesOf[lpToken]);
+        require(
+            lockType < _numLockTypesOf[lpToken],
+            "Lock type does not exist"
+        );
         return _lockFarmingOf[lpToken][lockType];
     }
 
@@ -82,7 +85,10 @@ contract FarmingFactory is Ownable {
         address rewardWallet,
         uint256 totalRewardPerMonth
     ) external onlyOwner {
-        require(_savingFarmingOf[lpToken] == address(0));
+        require(
+            _savingFarmingOf[lpToken] == address(0),
+            "Saving farming pool created before"
+        );
         SavingFarming newSavingContract = new SavingFarming(
             lpToken,
             rewardToken,

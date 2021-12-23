@@ -51,7 +51,10 @@ contract SavingFarming is Ownable, Pausable {
     }
 
     modifier onlyOperator() {
-        require(msg.sender == owner() || msg.sender == address(farmingFactory));
+        require(
+            msg.sender == owner() || msg.sender == address(farmingFactory),
+            "Caller is not operator"
+        );
         _;
     }
 
@@ -98,8 +101,14 @@ contract SavingFarming is Ownable, Pausable {
     }
 
     function deposit(uint256 amount) external whenNotPaused {
-        require(lpContract.balanceOf(msg.sender) >= amount);
-        require(lpContract.allowance(msg.sender, address(this)) >= amount);
+        require(
+            lpContract.balanceOf(msg.sender) >= amount,
+            "Not enough balance"
+        );
+        require(
+            lpContract.allowance(msg.sender, address(this)) >= amount,
+            "Not enough allowance"
+        );
         _settle(msg.sender);
         lpContract.transferFrom(msg.sender, address(this), amount);
         if (_farmingInfoOf[msg.sender].amount == 0)
@@ -117,7 +126,10 @@ contract SavingFarming is Ownable, Pausable {
     }
 
     function withdraw(uint256 amount) external {
-        require(_farmingInfoOf[msg.sender].amount >= amount);
+        require(
+            _farmingInfoOf[msg.sender].amount >= amount,
+            "Not enough amount to withdraw"
+        );
         _settle(msg.sender);
         lpContract.transfer(msg.sender, amount);
         if (_farmingInfoOf[msg.sender].amount == amount)
@@ -138,16 +150,19 @@ contract SavingFarming is Ownable, Pausable {
         external
         whenNotPaused
     {
-        require(_farmingInfoOf[msg.sender].amount >= amount);
+        require(
+            _farmingInfoOf[msg.sender].amount >= amount,
+            "Not enough amount to transfer"
+        );
         uint8 numLockTypes = farmingFactory.getNumLockTypes(
             address(lpContract)
         );
-        require(option < numLockTypes);
+        require(option < numLockTypes, "Option out of range");
         address lockFarming = farmingFactory.getLockFarmingContract(
             address(lpContract),
             option
         );
-        require(lockFarming != address(0));
+        require(lockFarming != address(0), "Lock farming pool does not exists");
         _settle(msg.sender);
         lpContract.transfer(lockFarming, amount);
         LockFarming(lockFarming).receiveLpFromSavingFarming(msg.sender, amount);
@@ -172,9 +187,13 @@ contract SavingFarming is Ownable, Pausable {
 
     function _settle(address participant) private {
         uint256 interest = getCurrentInterest(participant);
-        require(rewardToken.balanceOf(_rewardWallet) >= interest);
         require(
-            rewardToken.allowance(_rewardWallet, address(this)) >= interest
+            rewardToken.balanceOf(_rewardWallet) >= interest,
+            "Not enough balance to award"
+        );
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= interest,
+            "Not enough allowance to award"
         );
         rewardToken.transferFrom(_rewardWallet, participant, interest);
         emit Settle(address(lpContract), participant, interest);
