@@ -62,7 +62,7 @@ contract Lottery is Ownable, VRFConsumerBase {
             0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06
         )
     {
-        currentRound = 1;
+        currentRound = 0;
         rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
@@ -108,14 +108,17 @@ contract Lottery is Ownable, VRFConsumerBase {
         address[] memory lpTokens,
         uint8[] memory weights
     ) external onlyOwner {
-        require(_remainingPrizes == 0);
+        require(_remainingPrizes == 0, "Last round not completed");
         currentRound++;
         nextLotteryTime = startingTime;
         numWinners = numWinners_;
         _remainingPrizes = numWinners_;
-        require(lpTokens.length == farmingFactory.getNumSupportedLpTokens());
+        require(lpTokens.length == weights.length, "Lengths mismatch");
         for (uint256 i = 0; i < lpTokens.length; i++) {
-            require(farmingFactory.checkLpTokenStatus(lpTokens[i]));
+            require(
+                farmingFactory.checkLpTokenStatus(lpTokens[i]),
+                "LP token not supported"
+            );
             _weightOf[lpTokens[i]] = weights[i];
         }
         emit NewLotterySchedule(currentRound, startingTime);
@@ -161,16 +164,23 @@ contract Lottery is Ownable, VRFConsumerBase {
         external
         onlyOwner
     {
-        require(_remainingPrizes > 0);
-        require(_status == SpinStatus.FINISHED);
-        require(block.timestamp > nextLotteryTime);
+        require(_remainingPrizes > 0, "Out of prizes");
+        require(_status == SpinStatus.FINISHED, "Last spin not completed");
+        require(block.timestamp > nextLotteryTime, "Not spin time yet");
         if (_remainingPrizes == numWinners) _createLotteryList();
-        require(_players.length > numWinners && numWinners > 0);
-        require(rewardToken.balanceOf(_rewardWallet) >= rewardAmount);
+        require(_players.length > _remainingPrizes, "Not enough players");
         require(
-            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount
+            rewardToken.balanceOf(_rewardWallet) >= rewardAmount,
+            "Not enough amount to award"
         );
-        require(LINK.balanceOf(address(this)) >= _linkFee);
+        require(
+            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount,
+            "Not enough allowance to award"
+        );
+        require(
+            LINK.balanceOf(address(this)) >= _linkFee,
+            "Not enough LINK to spin"
+        );
         _currentPrize = prize;
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;

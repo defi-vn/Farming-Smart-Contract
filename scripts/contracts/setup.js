@@ -14,20 +14,20 @@ const TOTAL_REWARD_PER_MONTH = "2000000000000000000";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const SUPPORTED_LPTOKENS = [
   {
-    pair: "0xebeef1602b553ce64a875128584b81046025748d",
-    router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
+    pair: "0xe8ea253701EcCA7c3DE03E801850cf46573BE88c",
+    router: "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
   },
   {
-    pair: "0x52df67d03C094f601300c9Fe84c9A5139521FfAc",
-    router: "0x10ed43c718714eb63d5aa57b78b54704e256024e"
+    pair: "0x31e2eE9573273C7e89105b6ca5deB8aeA87D45b6",
+    router: "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"
   },
   {
-    pair: "0xc928A0502658DAB87894a1Fc75667aec8e3031AF",
-    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7"
+    pair: "0xb38531b3d3872965A7965B124f982B39dd36eF0B",
+    router: "0x3380ae82e39e42ca34ebed69af67faa0683bb5c1"
   },
   {
-    pair: "0x82ecF986eEf808d03c1eC64E9f277269b3A00e45",
-    router: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7"
+    pair: "0x3014EE01031567F49c9f80cFEB64828dD97876Ce",
+    router: "0x3380ae82e39e42ca34ebed69af67faa0683bb5c1"
   }
 ];
 
@@ -95,7 +95,6 @@ async function setup() {
   const CHAIN_ID = (ENVIRONMENT === "pre-live" || ENVIRONMENT === "live") ? 56 : 97;
 
   console.log("==============SETUP===================");
-  let contractCollection = [];
   // Approve reward token for all SavingFarming and LockFarming contracts
   for (let i = 0; i < SUPPORTED_LPTOKENS.length; i++) {
     let lpToken = SUPPORTED_LPTOKENS[i].pair;
@@ -147,7 +146,6 @@ async function setup() {
         [REWARD_WALLET, REWARD_WALLET_PRIVK]
       );
     }
-    contractCollection.push(info);
   }
 
   // Approve reward token for Lottery contract
@@ -171,8 +169,6 @@ async function setup() {
     [DEPLOY_INFO[ENVIRONMENT].Lottery, "1000000000000000000"],
     [DEPLOYER, DEPLOYER_PRIVK]
   );
-
-  return contractCollection;
 }
 
 createFarmingPools();
