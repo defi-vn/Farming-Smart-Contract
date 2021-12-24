@@ -193,10 +193,10 @@ contract Lottery is Ownable, VRFConsumerBase {
             rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount,
             "Not enough allowance to award"
         );
-        require(
-            LINK.balanceOf(address(this)) >= _linkFee,
-            "Not enough LINK to spin"
-        );
+        // require(
+        //     LINK.balanceOf(address(this)) >= _linkFee,
+        //     "Not enough LINK to spin"
+        // );
         _currentPrize = prize;
         _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
