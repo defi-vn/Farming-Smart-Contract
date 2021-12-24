@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const deployInfo = require("../../../deploy.json");
 
 const CONTRACT_NAME = "Lottery";
-const NEW_OWNER = "0x752F4d07DB335ae231014A74d23D98fcF99f7fe9";
+const OPERATOR = "0x752F4d07DB335ae231014A74d23D98fcF99f7fe9";
 
 async function setOperator() {
   // Set operator
@@ -10,9 +10,9 @@ async function setOperator() {
   const factory = await hre.ethers.getContractFactory(CONTRACT_NAME);
   await factory
     .connect(owner)
-    .attach(deployInfo.beta.Lottery)
-    .setOperators([NEW_OWNER], [true]);
-  console.log(`Lottery (beta) has been transfered to new owner at ${NEW_OWNER}`);
+    .attach(deployInfo.staging.Lottery)
+    .setOperators([OPERATOR], [true]);
+  console.log(`${OPERATOR} has been granted operator role`);
 }
 
 setOperator();
