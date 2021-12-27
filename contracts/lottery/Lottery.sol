@@ -25,7 +25,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     uint256 public currentRound;
     IERC20 public rewardToken;
     FarmingFactory public farmingFactory;
-    uint256 public numWinners;
+    uint256[] public rewardAmounts;
     uint256 public nextLotteryTime;
     uint256 private _totalLockedLPs;
     uint256 private _remainingPrizes;
@@ -33,7 +33,6 @@ contract Lottery is Ownable, VRFConsumerBase {
     address[] private _players;
     Prize[] private _prizes;
     uint256 private _currentPrize;
-    uint256 private _rewardAmount;
     bytes32 private _linkKeyHash;
     uint256 private _linkFee;
     SpinStatus private _status;
@@ -42,9 +41,14 @@ contract Lottery is Ownable, VRFConsumerBase {
     mapping(address => uint256) private _farmingAmountOf;
     mapping(address => uint8) private _weightOf;
     mapping(address => bool) private _operators;
+    mapping(uint256 => bool) private _spinnedBefore;
 
-    event NewLotterySchedule(uint256 round, uint256 startingTime);
-    event Reward(
+    event NewLotterySchedule(
+        uint256 round,
+        uint256 startingTime,
+        uint256[] rewardAmounts
+    );
+    event Award(
         uint256 round,
         address winner,
         uint256 prize,
@@ -54,8 +58,7 @@ contract Lottery is Ownable, VRFConsumerBase {
     constructor(
         address rewardToken_,
         address rewardWallet,
-        address farmingFactory_,
-        uint256 numWinners_
+        address farmingFactory_
     )
         Ownable()
         VRFConsumerBase(
@@ -67,12 +70,11 @@ contract Lottery is Ownable, VRFConsumerBase {
         rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
-        numWinners = numWinners_;
         _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
         _linkFee = 10**17;
         _status = SpinStatus.FINISHED;
-        uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
         _operators[msg.sender] = true;
+        uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
         for (uint256 i = 0; i < numLpTokens; i++)
             _weightOf[farmingFactory.lpTokens(i)] = 1;
     }
@@ -120,15 +122,19 @@ contract Lottery is Ownable, VRFConsumerBase {
 
     function scheduleNextLottery(
         uint256 startingTime,
-        uint256 numWinners_,
+        uint256[] memory rewardAmounts_,
         address[] memory lpTokens,
         uint8[] memory weights
     ) external onlyOperator {
         require(_remainingPrizes == 0, "Last round not completed");
+        for (uint256 i = 0; i < rewardAmounts.length; i++)
+            delete _spinnedBefore[i];
         currentRound++;
         nextLotteryTime = startingTime;
-        numWinners = numWinners_;
-        _remainingPrizes = numWinners_;
+        _remainingPrizes = rewardAmounts_.length;
+        delete rewardAmounts;
+        for (uint256 i = 0; i < _remainingPrizes; i++)
+            rewardAmounts.push(rewardAmounts_[i]);
         require(lpTokens.length == weights.length, "Lengths mismatch");
         for (uint256 i = 0; i < lpTokens.length; i++) {
             require(
@@ -137,12 +143,14 @@ contract Lottery is Ownable, VRFConsumerBase {
             );
             _weightOf[lpTokens[i]] = weights[i];
         }
-        emit NewLotterySchedule(currentRound, startingTime);
+        emit NewLotterySchedule(currentRound, startingTime, rewardAmounts_);
     }
 
     function _createLotteryList() private {
-        for (uint256 i = 0; i < _players.length; i++)
+        for (uint256 i = 0; i < _players.length; i++) {
             delete _isPlayer[_players[i]];
+            delete _farmingAmountOf[_players[i]];
+        }
         delete _players;
         delete _totalLockedLPs;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
@@ -176,21 +184,21 @@ contract Lottery is Ownable, VRFConsumerBase {
         }
     }
 
-    function spinReward(uint256 prize, uint256 rewardAmount)
-        external
-        onlyOperator
-    {
+    function spinReward(uint256 prize) external onlyOperator {
         require(_remainingPrizes > 0, "Out of prizes");
         require(_status == SpinStatus.FINISHED, "Last spin not completed");
         require(block.timestamp > nextLotteryTime, "Not spin time yet");
-        if (_remainingPrizes == numWinners) _createLotteryList();
+        require(prize < rewardAmounts.length, "Prize does not exist");
+        require(!_spinnedBefore[prize], "Prize spinned before");
+        if (_remainingPrizes == rewardAmounts.length) _createLotteryList();
         require(_players.length > _remainingPrizes, "Not enough players");
         require(
-            rewardToken.balanceOf(_rewardWallet) >= rewardAmount,
+            rewardToken.balanceOf(_rewardWallet) >= rewardAmounts[prize],
             "Not enough amount to award"
         );
         require(
-            rewardToken.allowance(_rewardWallet, address(this)) >= rewardAmount,
+            rewardToken.allowance(_rewardWallet, address(this)) >=
+                rewardAmounts[prize],
             "Not enough allowance to award"
         );
         // require(
@@ -198,8 +206,8 @@ contract Lottery is Ownable, VRFConsumerBase {
         //     "Not enough LINK to spin"
         // );
         _currentPrize = prize;
-        _rewardAmount = rewardAmount;
         _status = SpinStatus.SPINNING;
+        _spinnedBefore[prize] = true;
         // requestRandomness(_linkKeyHash, _linkFee);
 
         // TODO: Use Chainlink VRF and delete from here
@@ -216,14 +224,27 @@ contract Lottery is Ownable, VRFConsumerBase {
                 _totalLockedLPs = _totalLockedLPs.sub(
                     _farmingAmountOf[_players[i]]
                 );
+                delete _farmingAmountOf[_players[i]];
                 _players[i] = _players[_players.length - 1];
                 _players.pop();
                 break;
-            } else randomNumber -= _farmingAmountOf[_players[i]];
+            } else
+                randomNumber = randomNumber.sub(_farmingAmountOf[_players[i]]);
         }
-        rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
-        _prizes.push(Prize(chosenPlayer, _currentPrize, _rewardAmount));
-        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
+        rewardToken.transferFrom(
+            _rewardWallet,
+            chosenPlayer,
+            rewardAmounts[_currentPrize]
+        );
+        _prizes.push(
+            Prize(chosenPlayer, _currentPrize, rewardAmounts[_currentPrize])
+        );
+        emit Award(
+            currentRound,
+            chosenPlayer,
+            _currentPrize.add(1),
+            rewardAmounts[_currentPrize]
+        );
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;
@@ -245,14 +266,27 @@ contract Lottery is Ownable, VRFConsumerBase {
                 _totalLockedLPs = _totalLockedLPs.sub(
                     _farmingAmountOf[_players[i]]
                 );
+                delete _farmingAmountOf[_players[i]];
                 _players[i] = _players[_players.length - 1];
                 _players.pop();
                 break;
-            } else randomNumber -= _farmingAmountOf[_players[i]];
+            } else
+                randomNumber = randomNumber.sub(_farmingAmountOf[_players[i]]);
         }
-        rewardToken.transferFrom(_rewardWallet, chosenPlayer, _rewardAmount);
-        _prizes.push(Prize(chosenPlayer, _currentPrize, _rewardAmount));
-        emit Reward(currentRound, chosenPlayer, _currentPrize, _rewardAmount);
+        rewardToken.transferFrom(
+            _rewardWallet,
+            chosenPlayer,
+            rewardAmounts[_currentPrize]
+        );
+        _prizes.push(
+            Prize(chosenPlayer, _currentPrize, rewardAmounts[_currentPrize])
+        );
+        emit Award(
+            currentRound,
+            chosenPlayer,
+            _currentPrize.add(1),
+            rewardAmounts[_currentPrize]
+        );
         if (_remainingPrizes > 0) _remainingPrizes--;
         if (_remainingPrizes == 0) {
             _prizeHistory[currentRound] = _prizes;

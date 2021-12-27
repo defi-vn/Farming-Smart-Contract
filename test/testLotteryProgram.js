@@ -10,15 +10,25 @@ const LP_TOKEN = "LpToken";
 
 before("Deploy Lottery, FarmingFactory, DFY contract, LP contract", async () => {
   // Prepare parameters
-  const [deployer, participant1, participant2, rewardWallet] = await hre.ethers.getSigners();
+  const [
+    deployer,
+    operator,
+    participant1,
+    participant2,
+    participant3,
+    participant4,
+    rewardWallet
+  ] = await hre.ethers.getSigners();
   this.deployer = deployer;
+  this.operator = operator;
   this.participant1 = participant1;
   this.participant2 = participant2;
+  this.participant3 = participant3;
+  this.participant4 = participant4;
   this.rewardWallet = rewardWallet;
   this.feeWallet = "0x0000000000000000000000000000000000000001";
   this.totalRewardPerMonth = "20000000000000000000000000";
-  this.depositAmount = 5000;
-  this.weight = 7;
+  this.weight = 1;
   this.totalSupply = "500000000000000000000000000";
 
   // Deploy DFYContract
@@ -41,8 +51,7 @@ before("Deploy Lottery, FarmingFactory, DFY contract, LP contract", async () => 
   this.lotteryContract = await this.lotteryFactory.deploy(
     this.dfyContract.address,
     this.rewardWallet.address,
-    this.farmingFactoryContract.address,
-    5
+    this.farmingFactoryContract.address
   );
   await this.lotteryContract.deployed();
 
@@ -56,7 +65,7 @@ describe("Test farming program", () => {
       .connect(this.deployer)
       .attach(this.farmingFactoryContract.address)
       .createLockFarming(
-        10,
+        1000,
         this.lpContract.address,
         this.dfyContract.address,
         this.rewardWallet.address,
@@ -70,6 +79,13 @@ describe("Test farming program", () => {
     expect(numLpTokens.toString()).to.equal("1");
     expect(lpToken).to.equal(this.lpContract.address);
     expect(numLockTypes.toString()).to.equal("1");
+  });
+
+  it("Set operator role", async () => {
+    await this.lotteryFactory
+      .connect(this.deployer)
+      .attach(this.lotteryContract.address)
+      .setOperators([this.operator.address], [true]);
   });
 
   it("Approve DFY token for Lottery contract", async () => {
@@ -88,11 +104,11 @@ describe("Test farming program", () => {
     await this.lpFactory
       .connect(this.participant1)
       .attach(this.lpContract.address)
-      .approve(this.lockFarmingContract.address, this.depositAmount);
+      .approve(this.lockFarmingContract.address, 1500);
     await this.lockFarmingFactory
       .connect(this.participant1)
       .attach(this.lockFarmingContract.address)
-      .deposit(this.depositAmount);
+      .deposit(1500);
     let numParticipants = await this.lockFarmingContract.getNumParticipants();
     let client = await this.lockFarmingContract.participants(0);
     let lockItems = await this.lockFarmingContract.getLockItems(this.participant1.address);
@@ -100,28 +116,8 @@ describe("Test farming program", () => {
     expect(numParticipants.toString()).to.equal("1");
     expect(client).to.equal(this.participant1.address);
     expect(lockItems.length).to.equal(1);
-    expect(lockItems[0]?.amount.toString()).to.equal(this.depositAmount.toString());
-    expect(validLockAmount.toString()).to.equal(this.depositAmount.toString());
-  });
-
-  it("Participant 1 deposits more LPs to LockFarming", async () => {
-    await this.lpFactory
-      .connect(this.participant1)
-      .attach(this.lpContract.address)
-      .approve(this.lockFarmingContract.address, this.depositAmount * 3);
-    await this.lockFarmingFactory
-      .connect(this.participant1)
-      .attach(this.lockFarmingContract.address)
-      .deposit(this.depositAmount * 3);
-    let numParticipants = await this.lockFarmingContract.getNumParticipants();
-    let client = await this.lockFarmingContract.participants(0);
-    let lockItems = await this.lockFarmingContract.getLockItems(this.participant1.address);
-    let validLockAmount = await this.lockFarmingContract.getValidLockAmount(this.participant1.address);
-    expect(numParticipants.toString()).to.equal("1");
-    expect(client).to.equal(this.participant1.address);
-    expect(lockItems.length).to.equal(2);
-    expect(lockItems[1]?.amount.toString()).to.equal((this.depositAmount * 3).toString());
-    expect(validLockAmount.toString()).to.equal((this.depositAmount * 4).toString());
+    expect(lockItems[0]?.amount.toString()).to.equal("1500");
+    expect(validLockAmount.toString()).to.equal("1500");
   });
 
   it("Participant 2 deposits some LPs to LockFarming", async () => {
@@ -150,6 +146,40 @@ describe("Test farming program", () => {
     expect(validLockAmount.toString()).to.equal("2000");
   });
 
+  it("Participant 3 deposits some LPs to LockFarming", async () => {
+    await this.lpFactory
+      .connect(this.participant1)
+      .attach(this.lpContract.address)
+      .transfer(this.participant3.address, 2000);
+    await this.lpFactory
+      .connect(this.participant3)
+      .attach(this.lpContract.address)
+      .approve(this.lockFarmingContract.address, 2000);
+    await this.lockFarmingFactory
+      .connect(this.participant3)
+      .attach(this.lockFarmingContract.address)
+      .deposit(2000);
+    let numParticipants = await this.lockFarmingContract.getNumParticipants();
+    expect(numParticipants.toString()).to.equal("3");
+  });
+
+  it("Participant 4 deposits some LPs to LockFarming", async () => {
+    await this.lpFactory
+      .connect(this.participant1)
+      .attach(this.lpContract.address)
+      .transfer(this.participant4.address, 5000);
+    await this.lpFactory
+      .connect(this.participant4)
+      .attach(this.lpContract.address)
+      .approve(this.lockFarmingContract.address, 5000);
+    await this.lockFarmingFactory
+      .connect(this.participant4)
+      .attach(this.lockFarmingContract.address)
+      .deposit(5000);
+    let numParticipants = await this.lockFarmingContract.getNumParticipants();
+    expect(numParticipants.toString()).to.equal("4");
+  });
+
   it("Set reward wallet", async () => {
     await this.lotteryFactory
       .connect(this.deployer)
@@ -164,13 +194,13 @@ describe("Test farming program", () => {
       .setRewardToken(this.dfyContract.address);
   });
 
-  it("Schedule next lottery round", async () => {
+  it("Schedule first lottery round", async () => {
     await this.lotteryFactory
       .connect(this.deployer)
       .attach(this.lotteryContract.address)
       .scheduleNextLottery(
         Math.floor(Date.now() / 1000) - 1,
-        1,
+        [2500],
         [this.lpContract.address],
         [this.weight]
       );
@@ -183,6 +213,62 @@ describe("Test farming program", () => {
     await this.lotteryFactory
       .connect(this.deployer)
       .attach(this.lotteryContract.address)
-      .spinReward(1, 1000);
+      .spinReward(0);
+  });
+
+  it("Schedule second lottery round", async () => {
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .scheduleNextLottery(
+        Math.floor(Date.now() / 1000) - 1,
+        [1400, 2400, 3200],
+        [this.lpContract.address],
+        [this.weight]
+      );
+    let weight = await this.lotteryContract.getWeight([this.lpContract.address]);
+    expect(weight.length).to.equal(1);
+    expect(weight[0].toString()).to.equal(this.weight.toString());
+  });
+
+  it("Spin reward 3 times - not use Chainlink VRF", async () => {
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .spinReward(0);
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .spinReward(2);
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .spinReward(1);
+  });
+
+  it("Schedule third lottery round", async () => {
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .scheduleNextLottery(
+        Math.floor(Date.now() / 1000) - 1,
+        [2200, 3300],
+        [this.lpContract.address],
+        [7]
+      );
+    let weights = await this.lotteryContract.getWeight([this.lpContract.address]);
+    expect(weights.length).to.equal(1);
+    expect(weights[0]?.toString()).to.equal("7");
+  });
+
+  it("Spin reward twice - not use Chainlink VRF", async () => {
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .spinReward(1);
+    await this.lotteryFactory
+      .connect(this.operator)
+      .attach(this.lotteryContract.address)
+      .spinReward(0);
   });
 });
