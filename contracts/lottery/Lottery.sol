@@ -170,10 +170,13 @@ contract Lottery is Ownable, VRFConsumerBase {
                 uint256 numParticipants = lockFarming.getNumParticipants();
                 for (uint256 k = 0; k < numParticipants; k++) {
                     address participant = lockFarming.participants(k);
-                    uint256 weightedFarmingAmount = lockFarming
-                        .getValidLockAmount(participant)
-                        .mul(_weightOf[lpToken]);
-                    if (!_isPlayer[participant]) {
+                    uint256 farmingAmount = lockFarming.getValidLockAmount(
+                        participant
+                    );
+                    uint256 weightedFarmingAmount = farmingAmount.mul(
+                        _weightOf[lpToken]
+                    );
+                    if (farmingAmount > 0 && !_isPlayer[participant]) {
                         _players.push(participant);
                         _isPlayer[participant] = true;
                     }
