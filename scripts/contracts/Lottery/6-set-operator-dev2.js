@@ -14,7 +14,7 @@ async function setOperator() {
   await factory
     .connect(owner)
     .attach(deployInfo.dev2.Lottery)
-    .setOperators(OPERATOR, [true]);
+    .setOperators(OPERATOR, OPERATOR.map(operator => true));
   console.log(`${OPERATOR} has been granted operator role`);
 }
 
