@@ -103,6 +103,10 @@ contract Lottery is Ownable, VRFConsumerBase {
         return weights;
     }
 
+    function getNumPrizes() external view returns (uint256) {
+        return rewardAmounts.length;
+    }
+
     function setOperators(address[] memory operators, bool[] memory isOperators)
         external
         onlyOwner
