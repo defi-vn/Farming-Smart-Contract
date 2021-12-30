@@ -208,55 +208,14 @@ contract Lottery is Ownable, VRFConsumerBase {
                 rewardAmounts[prize],
             "Not enough allowance to award"
         );
-        // require(
-        //     LINK.balanceOf(address(this)) >= _linkFee,
-        //     "Not enough LINK to spin"
-        // );
+        require(
+            LINK.balanceOf(address(this)) >= _linkFee,
+            "Not enough LINK to spin"
+        );
         _currentPrize = prize;
         _status = SpinStatus.SPINNING;
         _spinnedBefore[prize] = true;
-        // requestRandomness(_linkKeyHash, _linkFee);
-
-        // TODO: Use Chainlink VRF and delete from here
-        _status = SpinStatus.FINISHED;
-        address chosenPlayer = _players[0];
-        uint256 randomness = uint256(
-            keccak256(abi.encodePacked(block.timestamp))
-        );
-        uint256 randomNumber = randomness.mod(_totalLockedLPs);
-        for (uint256 i = 0; i < _players.length; i++) {
-            if (randomNumber < _farmingAmountOf[_players[i]]) {
-                chosenPlayer = _players[i];
-                delete _isPlayer[_players[i]];
-                _totalLockedLPs = _totalLockedLPs.sub(
-                    _farmingAmountOf[_players[i]]
-                );
-                delete _farmingAmountOf[_players[i]];
-                _players[i] = _players[_players.length - 1];
-                _players.pop();
-                break;
-            } else
-                randomNumber = randomNumber.sub(_farmingAmountOf[_players[i]]);
-        }
-        rewardToken.transferFrom(
-            _rewardWallet,
-            chosenPlayer,
-            rewardAmounts[_currentPrize]
-        );
-        _prizes.push(
-            Prize(chosenPlayer, _currentPrize, rewardAmounts[_currentPrize])
-        );
-        emit Award(
-            currentRound,
-            chosenPlayer,
-            _currentPrize.add(1),
-            rewardAmounts[_currentPrize]
-        );
-        if (_remainingPrizes > 0) _remainingPrizes--;
-        if (_remainingPrizes == 0) {
-            _prizeHistory[currentRound] = _prizes;
-            delete _prizes;
-        }
+        requestRandomness(_linkKeyHash, _linkFee);
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness)

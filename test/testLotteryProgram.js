@@ -211,102 +211,102 @@ describe("Test farming program", () => {
     expect(weight[0].toString()).to.equal(this.weight.toString());
   });
 
-  it("Spin reward - not use Chainlink VRF", async () => {
-    await this.lotteryFactory
-      .connect(this.deployer)
-      .attach(this.lotteryContract.address)
-      .spinReward(0);
-  });
+  // it("Spin reward - not use Chainlink VRF", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.deployer)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(0);
+  // });
 
-  it("Schedule second lottery round", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .scheduleNextLottery(
-        Math.floor(Date.now() / 1000) - 1,
-        [1400, 2400, 3200],
-        [this.lpContract.address],
-        [this.weight]
-      );
-    let currentRound = await this.lotteryContract.currentRound();
-    let weight = await this.lotteryContract.getWeight([this.lpContract.address]);
-    expect(currentRound.toString()).to.equal("2");
-    expect(weight.length).to.equal(1);
-    expect(weight[0].toString()).to.equal(this.weight.toString());
-  });
+  // it("Schedule second lottery round", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .scheduleNextLottery(
+  //       Math.floor(Date.now() / 1000) - 1,
+  //       [1400, 2400, 3200],
+  //       [this.lpContract.address],
+  //       [this.weight]
+  //     );
+  //   let currentRound = await this.lotteryContract.currentRound();
+  //   let weight = await this.lotteryContract.getWeight([this.lpContract.address]);
+  //   expect(currentRound.toString()).to.equal("2");
+  //   expect(weight.length).to.equal(1);
+  //   expect(weight[0].toString()).to.equal(this.weight.toString());
+  // });
 
-  it("Spin reward 3 times - not use Chainlink VRF", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(0);
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(2);
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(1);
-  });
+  // it("Spin reward 3 times - not use Chainlink VRF", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(0);
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(2);
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(1);
+  // });
 
-  it("Schedule third lottery round", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .scheduleNextLottery(
-        Math.floor(Date.now() / 1000) - 1,
-        [2200, 3300],
-        [this.lpContract.address],
-        [7]
-      );
-    let currentRound = await this.lotteryContract.currentRound();
-    let weights = await this.lotteryContract.getWeight([this.lpContract.address]);
-    expect(currentRound.toString()).to.equal("3");
-    expect(weights.length).to.equal(1);
-    expect(weights[0]?.toString()).to.equal("7");
-  });
+  // it("Schedule third lottery round", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .scheduleNextLottery(
+  //       Math.floor(Date.now() / 1000) - 1,
+  //       [2200, 3300],
+  //       [this.lpContract.address],
+  //       [7]
+  //     );
+  //   let currentRound = await this.lotteryContract.currentRound();
+  //   let weights = await this.lotteryContract.getWeight([this.lpContract.address]);
+  //   expect(currentRound.toString()).to.equal("3");
+  //   expect(weights.length).to.equal(1);
+  //   expect(weights[0]?.toString()).to.equal("7");
+  // });
 
-  it("Spin reward twice - not use Chainlink VRF", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(1);
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(0);
-  });
+  // it("Spin reward twice - not use Chainlink VRF", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(1);
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(0);
+  // });
 
-  it("Schedule forth lottery round", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .scheduleNextLottery(
-        Math.floor(Date.now() / 1000) - 1,
-        [210, 320, 430],
-        [this.lpContract.address],
-        [3]
-      );
-    let currentRound = await this.lotteryContract.currentRound();
-    let weights = await this.lotteryContract.getWeight([this.lpContract.address]);
-    expect(currentRound.toString()).to.equal("4");
-    expect(weights.length).to.equal(1);
-    expect(weights[0]?.toString()).to.equal("3");
-  });
+  // it("Schedule forth lottery round", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .scheduleNextLottery(
+  //       Math.floor(Date.now() / 1000) - 1,
+  //       [210, 320, 430],
+  //       [this.lpContract.address],
+  //       [3]
+  //     );
+  //   let currentRound = await this.lotteryContract.currentRound();
+  //   let weights = await this.lotteryContract.getWeight([this.lpContract.address]);
+  //   expect(currentRound.toString()).to.equal("4");
+  //   expect(weights.length).to.equal(1);
+  //   expect(weights[0]?.toString()).to.equal("3");
+  // });
 
-  it("Spin reward 3 times - not use Chainlink VRF", async () => {
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(1);
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(0);
-    await this.lotteryFactory
-      .connect(this.operator)
-      .attach(this.lotteryContract.address)
-      .spinReward(2);
-  });
+  // it("Spin reward 3 times - not use Chainlink VRF", async () => {
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(1);
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(0);
+  //   await this.lotteryFactory
+  //     .connect(this.operator)
+  //     .attach(this.lotteryContract.address)
+  //     .spinReward(2);
+  // });
 });
