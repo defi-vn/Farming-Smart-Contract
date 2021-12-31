@@ -1,0 +1,283 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0x55C36a2b1a0AC73eBdadfD5851FC591f081D2C44",
+      "txHash": "0x56daa90ceb0ac0d1527668183b94ba3a9fc2dd9b68c2c032e74cc877bac3dc18",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "8ff307b75f1fe3f02b19e7339fb3f61bcfd09097c3bc07b173588001df379640": {
+      "address": "0x438999529daF64d7c6A4c0662A6398c934E50b06",
+      "txHash": "0xc7f83e601542a41bb290ae49e015f99dedae5fb7d9202bfedb2bdc09223ab608",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:21"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:26"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:30"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:21"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:77"
+          },
+          {
+            "contract": "VRFConsumerBaseUpgradeable",
+            "label": "LINK",
+            "type": "t_contract(LinkTokenInterface)265",
+            "src": "contracts/utils/VRFConsumerBaseUpgradeable.sol:185"
+          },
+          {
+            "contract": "VRFConsumerBaseUpgradeable",
+            "label": "vrfCoordinator",
+            "type": "t_address",
+            "src": "contracts/utils/VRFConsumerBaseUpgradeable.sol:187"
+          },
+          {
+            "contract": "VRFConsumerBaseUpgradeable",
+            "label": "nonces",
+            "type": "t_mapping(t_bytes32,t_uint256)",
+            "src": "contracts/utils/VRFConsumerBaseUpgradeable.sol:193"
+          },
+          {
+            "contract": "ERC1967UpgradeUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:214"
+          },
+          {
+            "contract": "UUPSUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:80"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "currentRound",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:30"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "rewardToken",
+            "type": "t_contract(IERC20Upgradeable)1033",
+            "src": "contracts/lottery/LotteryProxy.sol:31"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "farmingFactory",
+            "type": "t_contract(FarmingFactory)4079",
+            "src": "contracts/lottery/LotteryProxy.sol:32"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "rewardAmounts",
+            "type": "t_array(t_uint256)dyn_storage",
+            "src": "contracts/lottery/LotteryProxy.sol:33"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "nextLotteryTime",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:34"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_totalLockedLPs",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:35"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_remainingPrizes",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:36"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_rewardWallet",
+            "type": "t_address",
+            "src": "contracts/lottery/LotteryProxy.sol:37"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_players",
+            "type": "t_array(t_address)dyn_storage",
+            "src": "contracts/lottery/LotteryProxy.sol:38"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_prizes",
+            "type": "t_array(t_struct(Prize)6817_storage)dyn_storage",
+            "src": "contracts/lottery/LotteryProxy.sol:39"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_currentPrize",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:40"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_linkKeyHash",
+            "type": "t_bytes32",
+            "src": "contracts/lottery/LotteryProxy.sol:41"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_linkFee",
+            "type": "t_uint256",
+            "src": "contracts/lottery/LotteryProxy.sol:42"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_status",
+            "type": "t_enum(SpinStatus)6820",
+            "src": "contracts/lottery/LotteryProxy.sol:43"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_isPlayer",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/lottery/LotteryProxy.sol:44"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_prizeHistory",
+            "type": "t_mapping(t_uint256,t_array(t_struct(Prize)6817_storage)dyn_storage)",
+            "src": "contracts/lottery/LotteryProxy.sol:45"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_farmingAmountOf",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/lottery/LotteryProxy.sol:46"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_weightOf",
+            "type": "t_mapping(t_address,t_uint8)",
+            "src": "contracts/lottery/LotteryProxy.sol:47"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_operators",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/lottery/LotteryProxy.sol:48"
+          },
+          {
+            "contract": "LotteryProxy",
+            "label": "_spinnedBefore",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "src": "contracts/lottery/LotteryProxy.sol:49"
+          }
+        ],
+        "types": {
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_contract(IERC20Upgradeable)1033": {
+            "label": "contract IERC20Upgradeable"
+          },
+          "t_contract(FarmingFactory)4079": {
+            "label": "contract FarmingFactory"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]"
+          },
+          "t_array(t_struct(Prize)6817_storage)dyn_storage": {
+            "label": "struct LotteryProxy.Prize[]"
+          },
+          "t_struct(Prize)6817_storage": {
+            "label": "struct LotteryProxy.Prize",
+            "members": [
+              {
+                "label": "winner",
+                "type": "t_address"
+              },
+              {
+                "label": "prize",
+                "type": "t_uint256"
+              },
+              {
+                "label": "rewardAmount",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_bytes32": {
+            "label": "bytes32"
+          },
+          "t_enum(SpinStatus)6820": {
+            "label": "enum LotteryProxy.SpinStatus",
+            "members": [
+              "SPINNING",
+              "FINISHED"
+            ]
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_mapping(t_uint256,t_array(t_struct(Prize)6817_storage)dyn_storage)": {
+            "label": "mapping(uint256 => struct LotteryProxy.Prize[])"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_uint8)": {
+            "label": "mapping(address => uint8)"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_contract(LinkTokenInterface)265": {
+            "label": "contract LinkTokenInterface"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          }
+        }
+      }
+    }
+  }
+}

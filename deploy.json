@@ -46,6 +46,10 @@
 		"DFYToken": "0xd98560689c6e748dc37bc410b4d3096b1aa3d8c2",
 		"LINK": "0x404460C6A5EdE2D891e8297795264fDe62ADBB75",
 		"FarmingFactory": "0x2CC6110dB8eF3ef82a5762d3142470dd76f0c341",
-		"Lottery": ""
+		"Lottery": "",
+		"LotteryProxy": {
+			"proxy": "0x55C36a2b1a0AC73eBdadfD5851FC591f081D2C44",
+			"logic": "0x438999529daF64d7c6A4c0662A6398c934E50b06"
+		}
 	}
 }
