@@ -62,16 +62,16 @@ contract Lottery is Ownable, VRFConsumerBase {
     )
         Ownable()
         VRFConsumerBase(
-            0xa555fC018435bef5A13C6c6870a9d4C11DEC329C,
-            0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06
+            0x747973a5A2a4Ae1D3a8fDF5479f1514F65Db9C31,
+            0x404460C6A5EdE2D891e8297795264fDe62ADBB75
         )
     {
         currentRound = 0;
         rewardToken = IERC20(rewardToken_);
         _rewardWallet = rewardWallet;
         farmingFactory = FarmingFactory(farmingFactory_);
-        _linkKeyHash = 0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186;
-        _linkFee = 10**17;
+        _linkKeyHash = 0xc251acd21ec4fb7f31bb8868288bfdbaeb4fbfec2df3735ddbd4f7dc8d60103c;
+        _linkFee = 2 * 10**17;
         _status = SpinStatus.FINISHED;
         _operators[msg.sender] = true;
         uint256 numLpTokens = farmingFactory.getNumSupportedLpTokens();
